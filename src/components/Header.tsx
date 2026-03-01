@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Bell, Wallet } from "lucide-react";
+import { Search, Bell, Wallet, Settings } from "lucide-react";
 import { useI18n } from "@/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
@@ -13,10 +13,12 @@ export function Header() {
 
     const navLinks = [
         { href: "/", label: t("nav.dashboard") },
-        { href: "/activos/barcelona-loft", label: t("nav.assets") },
+        { href: "/activos", label: t("nav.assets") },
+        { href: "/proyectos", label: t("nav.projects") },
+        { href: "/documentos", label: t("nav.documents") },
+        { href: "/prestamos", label: t("nav.loans") },
+        { href: "/posicion-global", label: t("nav.global_position") },
         { href: "/ingesta", label: t("nav.ai_ingestion") },
-        { href: "/proyectos/bcn-renovation", label: t("nav.projects") },
-        { href: "/boveda", label: t("nav.vault") },
     ];
 
     return (
@@ -37,7 +39,7 @@ export function Header() {
                         {navLinks.map((link) => {
                             const isActive = link.href === "/"
                                 ? pathname === "/"
-                                : pathname.startsWith(link.href.split("/")[1]);
+                                : pathname.startsWith(link.href);
 
                             return (
                                 <Link
@@ -81,6 +83,10 @@ export function Header() {
                         <Bell size={20} />
                         <span className="absolute top-2 right-2.5 size-2 bg-rose-500 rounded-full border-2 border-white"></span>
                     </button>
+
+                    <Link href="/configuracion" className="size-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors">
+                        <Settings size={20} />
+                    </Link>
 
                     <div className="h-10 w-10 rounded-full border border-slate-200 overflow-hidden ring-2 ring-white">
                         <img

@@ -62,6 +62,7 @@ export interface ITransaction {
     status: TransactionStatus;
     splits?: Split[];
     linkedProjectId?: string;
+    linkedAssetId?: string;
     source: "manual" | "csv_import";
     processingTime?: string;
 }
@@ -127,4 +128,16 @@ export interface IKPIs {
     fcfIn: number;
     fcfOut: number;
     fiGoalProgress: number;
+}
+
+export interface ProviderConfig {
+    name: "openai" | "anthropic" | "google";
+    apiKey: string;
+    model: string;
+}
+
+export interface ISettings {
+    _id?: string;
+    activeProvider: "openai" | "anthropic" | "google";
+    providers: ProviderConfig[];
 }

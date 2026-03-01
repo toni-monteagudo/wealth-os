@@ -18,6 +18,7 @@ const TransactionSchema = new Schema<TransactionDocument>(
             },
         ],
         linkedProjectId: { type: Schema.Types.ObjectId, ref: "Project" },
+        linkedAssetId: { type: Schema.Types.ObjectId, ref: "Asset" },
         source: { type: String, enum: ["manual", "csv_import"], required: true },
         processingTime: { type: String },
     },

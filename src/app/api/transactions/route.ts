@@ -7,9 +7,14 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const status = searchParams.get("status");
+        const linkedAssetId = searchParams.get("linkedAssetId");
+        const linkedProjectId = searchParams.get("linkedProjectId");
         const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit") as string) : 50;
 
-        const query = status ? { status } : {};
+        const query: any = {};
+        if (status) query.status = status;
+        if (linkedAssetId) query.linkedAssetId = linkedAssetId;
+        if (linkedProjectId) query.linkedProjectId = linkedProjectId;
 
         const transactions = await Transaction.find(query)
             .sort({ date: -1, createdAt: -1 })

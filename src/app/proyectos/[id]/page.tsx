@@ -3,15 +3,17 @@
 import React from "react";
 import { useParams } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
-import { IProject } from "@/types";
+import { IProject, ITransaction } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { PremiumCard } from "@/components/ui/PremiumCard";
-import { Hammer, CalendarClock, TrendingUp } from "lucide-react";
+import { Hammer, CalendarClock, ArrowRightLeft } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
 
 export default function ProjectPage() {
     const params = useParams();
     const id = params.id as string;
     const { data: project, loading } = useApi<IProject>(`/api/projects/${id}`);
+    const { data: transactions } = useApi<ITransaction[]>(`/api/transactions?linkedProjectId=${id}`);
     const { t } = useI18n();
 
     if (loading) return <div className="p-8 animate-pulse text-slate-400 font-bold">Cargando proyecto...</div>;
@@ -44,7 +46,7 @@ export default function ProjectPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Main Column: Expenses Table */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 flex flex-col gap-6">
                     <PremiumCard className="!p-0 overflow-hidden">
                         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest">{t("projects.cost_breakdown")}</h3>
@@ -90,6 +92,44 @@ export default function ProjectPage() {
                                 </tbody>
                             </table>
                         </div>
+                    </PremiumCard>
+
+                    {/* Linked Transactions Section */}
+                    <PremiumCard className="!p-0 overflow-hidden">
+                        <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest flex items-center gap-2">
+                                <ArrowRightLeft size={16} className="text-accent" /> {t("projects.linked_transactions")}
+                            </h3>
+                            <span className="text-xs font-bold text-slate-500">{transactions?.length || 0} registros</span>
+                        </div>
+                        {(!transactions || transactions.length === 0) ? (
+                            <div className="p-8 text-center text-slate-400 font-medium">{t("projects.no_transactions")}</div>
+                        ) : (
+                            <div className="overflow-x-auto max-h-[300px]">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-white text-[10px] uppercase font-bold text-slate-400 tracking-wider sticky top-0">
+                                        <tr>
+                                            <th className="px-5 py-3 border-b border-slate-100">Fecha</th>
+                                            <th className="px-5 py-3 border-b border-slate-100">Descripción</th>
+                                            <th className="px-5 py-3 border-b border-slate-100">Categoría</th>
+                                            <th className="px-5 py-3 border-b border-slate-100 text-right">Importe</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {transactions.map((tx) => (
+                                            <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-5 py-3 text-slate-500 font-medium">{tx.date}</td>
+                                                <td className="px-5 py-3 font-bold text-slate-900">{tx.description}</td>
+                                                <td className="px-5 py-3"><Badge variant="neutral">{tx.category}</Badge></td>
+                                                <td className={`px-5 py-3 text-right font-mono font-bold ${tx.amount < 0 ? "text-slate-900" : "text-emerald-600"}`}>
+                                                    {formatCurrency(tx.amount)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </PremiumCard>
                 </div>
 

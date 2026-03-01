@@ -75,7 +75,7 @@ export default function ProjectVaultColumn() {
                     <div className="flex items-center gap-2">
                         <Folder size={18} className="text-slate-900" /> {t("dashboard.document_vault")}
                     </div>
-                    <Link href="/boveda" className="text-accent font-bold uppercase text-[10px] tracking-wider">{t("dashboard.upload")}</Link>
+                    <Link href="/documentos" className="text-accent font-bold uppercase text-[10px] tracking-wider">{t("dashboard.upload")}</Link>
                 </h2>
 
                 {loadingDocs ? (
@@ -104,8 +104,8 @@ export default function ProjectVaultColumn() {
                                 </div>
                             </div>
                         ))}
-                        <Link href="/boveda" className="block w-full text-center bg-slate-50 text-slate-600 font-bold text-xs py-3 border-t border-slate-200 hover:text-slate-900 transition-colors">
-                            Ver Bóveda Completa
+                        <Link href="/documentos" className="block w-full text-center bg-slate-50 text-slate-600 font-bold text-xs py-3 border-t border-slate-200 hover:text-slate-900 transition-colors">
+                            Ver Todos los Documentos
                         </Link>
                     </div>
                 )}

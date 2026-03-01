@@ -3,7 +3,9 @@
         "dashboard": "Dashboard",
         "assets": "Activos",
         "liabilities": "Pasivos",
-        "vault": "Bóveda",
+        "documents": "Documentos",
+        "loans": "Préstamos",
+        "global_position": "Posición Global",
         "ai_ingestion": "Ingesta IA",
         "projects": "Proyectos",
         "search_placeholder": "Buscar activos, docs..."
@@ -18,7 +20,7 @@
         "out": "Salidas",
         "active_assets": "Activos Activos",
         "operations_hub": "Hub de Operaciones",
-        "projects_vault": "Proyectos y Bóveda",
+        "projects_vault": "Proyectos y Documentos",
         "current_value": "Valor Actual",
         "mortgage": "Hipoteca",
         "annual_yield": "Rendimiento Anual",
@@ -40,7 +42,7 @@
         "budgeted": "Presupuestado",
         "actual": "Ejecutado",
         "in_progress": "En Curso",
-        "document_vault": "Bóveda de Documentos",
+        "document_vault": "Documentos",
         "upload": "Subir",
         "expires_in": "Expira en {days}d"
     },
@@ -66,7 +68,11 @@
         "active": "Activo",
         "payment_history": "Historial de Pagos",
         "paid": "Pagado",
-        "define_new_entity": "Definir Nueva Entidad"
+        "define_new_entity": "Definir Nueva Entidad",
+        "linked_loans": "Préstamos Asociados",
+        "linked_transactions": "Movimientos Bancarios",
+        "no_loans": "Sin préstamos vinculados",
+        "no_transactions": "Sin movimientos vinculados"
     },
     "ingestion": {
         "hub_title": "Hub de Ingesta IA",
@@ -107,10 +113,18 @@
         "amount": "Importe",
         "category_distribution": "Distribución por Categoría",
         "construction_notes": "Notas de Obra",
-        "quick_note": "Añadir nota rápida..."
+        "quick_note": "Añadir nota rápida...",
+        "linked_transactions": "Movimientos Bancarios Asociados",
+        "no_transactions": "Sin movimientos vinculados",
+        "budget": "Presupuesto",
+        "budgeted": "Presupuestado",
+        "actual": "Ejecutado",
+        "progress": "Progreso",
+        "all_projects": "Todos los Proyectos",
+        "all_projects_subtitle": "Gestiona y supervisa todos tus proyectos activos."
     },
     "vault": {
-        "title": "Bóveda y Reservas",
+        "title": "Documentos y Reservas",
         "subtitle": "Gestión de documentos críticos y provisiones de capital fantasma.",
         "upload_document": "Subir Documento",
         "new_reserve": "Nueva Reserva",
@@ -140,5 +154,59 @@
         "total_reserves": "Total Reservas",
         "real_operating_liquidity": "Liquidez Operativa Real",
         "excluding_ghost_reserves": "*Excluyendo reservas fantasma"
+    },
+    "loans": {
+        "title": "Préstamos e Hipotecas",
+        "subtitle": "Gestión centralizada de toda tu deuda: hipotecas, préstamos personales y financiación.",
+        "total_debt": "Deuda Total",
+        "monthly_total": "Cuota Mensual Total",
+        "avg_interest": "Interés Medio",
+        "num_loans": "Nº Préstamos",
+        "type": "Tipo",
+        "mortgage": "Hipoteca",
+        "loan": "Préstamo",
+        "balance": "Saldo Pendiente",
+        "interest_rate": "Tasa de Interés",
+        "monthly_payment": "Cuota Mensual",
+        "bank": "Banco",
+        "loan_number": "Nº Préstamo",
+        "linked_asset": "Activo Vinculado",
+        "no_linked_asset": "Sin activo vinculado",
+        "all_loans": "Todos los Préstamos"
+    },
+    "global_position": {
+        "title": "Posición Global",
+        "subtitle": "Visión consolidada de todos tus movimientos bancarios.",
+        "total_income": "Total Ingresos",
+        "total_expenses": "Total Gastos",
+        "net_balance": "Balance Neto",
+        "all_transactions": "Todas las Transacciones",
+        "filter_by_asset": "Filtrar por Activo",
+        "filter_by_project": "Filtrar por Proyecto",
+        "all": "Todos",
+        "date": "Fecha",
+        "description": "Descripción",
+        "category": "Categoría",
+        "amount": "Importe",
+        "linked_to": "Vinculado a",
+        "no_transactions": "No hay transacciones que mostrar."
+    },
+    "assets_list": {
+        "title": "Mis Activos",
+        "subtitle": "Todos tus activos inmobiliarios y de negocio en un vistazo.",
+        "real_estate": "Inmobiliario",
+        "business": "Negocio"
+    },
+    "configuration": {
+        "title": "Configuración Global",
+        "ai_settings": "Configuración de Inteligencia Artificial",
+        "ai_settings_desc": "Elige tu proveedor de IA y administra tus API keys de forma segura para la ingesta de documentos.",
+        "active_provider": "Proveedor Activo",
+        "save": "Guardar Configuración",
+        "saving": "Guardando...",
+        "success": "Configuración guardada correctamente",
+        "api_key": "API Key",
+        "api_key_placeholder": "sk-...",
+        "model": "Modelo"
     }
 }
