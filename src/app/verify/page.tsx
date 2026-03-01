@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
-export default function VerifyPage() {
+function VerifyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
@@ -86,5 +86,17 @@ export default function VerifyPage() {
 
             </div>
         </main>
+    );
+}
+
+export default function VerifyPage() {
+    return (
+        <Suspense fallback={
+            <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+                <Loader2 className="animate-spin text-accent" size={48} />
+            </main>
+        }>
+            <VerifyContent />
+        </Suspense>
     );
 }

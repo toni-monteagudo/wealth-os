@@ -16,8 +16,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
         // Recalculate actual spent based on paid/deposited expenses
         project.actualSpent = project.expenses
-            .filter((e) => e.status !== "Pendiente")
-            .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+            .filter((e: any) => e.status !== "Pendiente")
+            .reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0);
 
         await project.save();
 
