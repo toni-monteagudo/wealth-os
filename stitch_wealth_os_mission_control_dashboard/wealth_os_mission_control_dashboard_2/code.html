@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detalle de Activo Inmobiliario: Barcelona Loft</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981",secondary: "#334155","background": "#fafafa","surface": "#ffffff",},
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.75rem","2xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer components {
+            .premium-card {
+                @apply bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-xl transition-all duration-300;
+            }
+            .glass-overlay {
+                @apply bg-white/80 backdrop-blur-md border border-white/40;
+            }
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-zinc-50 text-slate-900 font-display min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white">
+<header class="glass-overlay sticky top-0 z-50 w-full border-b border-slate-200 px-6 py-4">
+<div class="max-w-[1600px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-10">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-white" style="font-size: 24px;">account_balance_wallet</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 leading-none">Wealth OS</h1>
+<p class="text-[10px] text-slate-500 font-bold tracking-[0.1em] mt-0.5 uppercase">Asset Detail</p>
+</div>
+</div>
+<nav class="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200">
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Dashboard</a>
+<a class="px-4 py-2 rounded-full bg-white shadow-sm text-slate-900 text-sm font-semibold" href="#">Activos</a>
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Pasivos</a>
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Bóveda</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-white border border-slate-200 rounded-full px-3 py-2 w-64 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-slate-400 mr-2" style="font-size: 20px;">search</span>
+<input class="bg-transparent border-none text-sm text-slate-900 placeholder-slate-400 focus:ring-0 w-full p-0" placeholder="Buscar activo..." type="text"/>
+<span class="text-[10px] text-slate-400 font-mono px-1.5 py-0.5 rounded border border-slate-200">⌘K</span>
+</div>
+<button class="size-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors relative">
+<span class="material-symbols-outlined" style="font-size: 20px;">notifications</span>
+<span class="absolute top-2.5 right-2.5 size-2 bg-rose-500 rounded-full border-2 border-white"></span>
+</button>
+<div class="h-10 w-10 rounded-full border border-slate-200 overflow-hidden ring-2 ring-white">
+<img alt="User Profile" class="object-cover w-full h-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnTmXsVy3mTlq5iVBHF0lf4F0RBfq5K6293fhY6Cto-ygkzuL97gewlACqU7GY67UiziEVJQCCegsX_z1vTMQoHhq0iu9xZ-EwUOOr34ZIVAeg4phi9LrP-E4oy4PXuAqHRkf2Nv1QCNk2tue1shKIBP3qsW8lU1XP76srTCmPjaczxCT-FPKOSlFTcA2fEEjaBq1TPEDWURNETzIJwslvR2CE7MNbdNHSWX5HI9MqFVk18ZQ4qIcywMJ9-yTfgjUxHwYiBuTGQP4"/>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 p-6 lg:p-8 max-w-[1600px] mx-auto w-full">
+<div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<nav class="flex text-sm text-slate-500 mb-2">
+<a class="hover:text-primary transition-colors" href="#">Activos</a>
+<span class="mx-2">/</span>
+<a class="hover:text-primary transition-colors" href="#">Real Estate</a>
+<span class="mx-2">/</span>
+<span class="text-slate-900 font-medium">Barcelona Loft</span>
+</nav>
+<h1 class="text-3xl font-bold text-slate-900 tracking-tight">Barcelona Loft</h1>
+<p class="text-slate-500 font-medium mt-1">Poble Sec, Barcelona • Adquirido en 2021</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium text-sm transition-all shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 18px;">share</span> Compartir
+            </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm transition-all shadow-md shadow-slate-900/10">
+<span class="material-symbols-outlined" style="font-size: 18px;">edit</span> Editar Activo
+            </button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<div class="lg:col-span-4 flex flex-col gap-6">
+<div class="premium-card overflow-hidden group">
+<div class="relative h-64 w-full">
+<img alt="Barcelona Loft Interior" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdkD4AEJx2-Cj3S40t9ahjTHhw4bZngo8_C6fpKUlTgJJWVD5v2xsgXYm0hA1TO1wQSqlvloOMu--8WLFTZ_4L0V9_BBWLqA72P-kDhXymprSmldheQms9Z0m5QGXcTdGMlgK2qwrVO8808WmtD2T8Ikas2gxHGRAv5rtOzO0AVqqG5Jc89FXyCJq4x-pY00DVtGqylJG9hqGvpKMjkxoiLNMyRnoCIGnakrYCrnbEXU-lNaH7GyQ_HQ64wLB3HpMunk92sBUSZaM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-60"></div>
+<div class="absolute bottom-4 left-4 text-white">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="material-symbols-outlined text-emerald-400" style="font-size: 16px;">verified</span>
+<span class="text-xs font-bold uppercase tracking-wider bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded border border-white/30">Residencial</span>
+</div>
+<p class="text-sm font-medium opacity-90">Carrer de la Concòrdia, 14</p>
+</div>
+</div>
+<div class="p-6">
+<div class="mb-6">
+<p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Valoración Actual</p>
+<div class="flex items-baseline gap-3">
+<h2 class="text-4xl font-bold text-slate-900 tracking-tight">$850,000</h2>
+<span class="inline-flex items-center text-emerald-600 text-sm font-bold bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+<span class="material-symbols-outlined mr-0.5" style="font-size: 16px;">trending_up</span> +12.4%
+                        </span>
+</div>
+<p class="text-slate-500 text-xs mt-2">Última tasación: 15 Oct, 2023</p>
+</div>
+<div class="space-y-4 border-t border-slate-100 pt-5">
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium text-slate-600">Precio de Compra</span>
+<span class="text-sm font-bold text-slate-900">$625,000</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium text-slate-600">Plusvalía Bruta</span>
+<span class="text-sm font-bold text-emerald-600">+$225,000</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium text-slate-600">Superficie</span>
+<span class="text-sm font-bold text-slate-900">120 m²</span>
+</div>
+</div>
+</div>
+</div>
+<div class="premium-card p-6">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-bold text-slate-900">Histórico de Valor</h3>
+<select class="bg-slate-50 border-none text-xs font-medium text-slate-600 rounded-lg py-1 pl-2 pr-6 focus:ring-0 cursor-pointer hover:bg-slate-100 transition-colors">
+<option>5 Años</option>
+<option>1 Año</option>
+<option>YTD</option>
+</select>
+</div>
+<div class="h-48 w-full flex items-end gap-2">
+<div class="w-full flex items-end justify-between h-full px-2">
+<div class="group relative flex flex-col items-center gap-1 h-full justify-end w-[12%]">
+<div class="w-full bg-slate-100 rounded-t-sm h-[40%] group-hover:bg-primary/30 transition-colors relative"></div>
+<span class="text-[10px] text-slate-400 font-medium">2019</span>
+</div>
+<div class="group relative flex flex-col items-center gap-1 h-full justify-end w-[12%]">
+<div class="w-full bg-slate-100 rounded-t-sm h-[55%] group-hover:bg-primary/30 transition-colors"></div>
+<span class="text-[10px] text-slate-400 font-medium">2020</span>
+</div>
+<div class="group relative flex flex-col items-center gap-1 h-full justify-end w-[12%]">
+<div class="w-full bg-slate-100 rounded-t-sm h-[50%] group-hover:bg-primary/30 transition-colors"></div>
+<span class="text-[10px] text-slate-400 font-medium">2021</span>
+</div>
+<div class="group relative flex flex-col items-center gap-1 h-full justify-end w-[12%]">
+<div class="w-full bg-emerald-200 rounded-t-sm h-[65%] group-hover:bg-primary/50 transition-colors"></div>
+<span class="text-[10px] text-slate-400 font-medium">2022</span>
+</div>
+<div class="group relative flex flex-col items-center gap-1 h-full justify-end w-[12%]">
+<div class="w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-sm h-[85%] shadow-lg shadow-emerald-200 relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                    $850k
+                                </div>
+</div>
+<span class="text-[10px] text-slate-900 font-bold">2023</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-4 flex flex-col gap-6">
+<div class="premium-card p-6 border-l-4 border-l-rose-500">
+<div class="flex justify-between items-start mb-6">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-rose-500">account_balance</span>
+<h3 class="font-bold text-lg text-slate-900">Hipoteca Activa</h3>
+</div>
+<p class="text-xs text-slate-500 font-medium">Banco Santander • Préstamo #9921</p>
+</div>
+<div class="text-right">
+<p class="text-rose-500 font-bold text-2xl">$400,000</p>
+<p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Deuda Pendiente</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="p-4 bg-slate-50 rounded-lg border border-slate-100">
+<p class="text-slate-500 text-xs font-medium mb-1">Tasa de Interés</p>
+<p class="text-slate-900 font-bold text-xl">3.2% <span class="text-xs text-slate-400 font-normal">Fijo</span></p>
+</div>
+<div class="p-4 bg-slate-50 rounded-lg border border-slate-100">
+<p class="text-slate-500 text-xs font-medium mb-1">Cuota Mensual</p>
+<p class="text-slate-900 font-bold text-xl">$1,850</p>
+</div>
+</div>
+<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Calendario de Amortización</h4>
+<div class="space-y-3">
+<div class="flex items-center gap-3 text-sm">
+<div class="w-12 font-bold text-slate-500">2024</div>
+<div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-400 w-[85%] rounded-full" title="Interés"></div>
+</div>
+<div class="w-16 text-right font-medium text-rose-500">$22.2k</div>
+</div>
+<div class="flex items-center gap-3 text-sm">
+<div class="w-12 font-bold text-slate-500">2025</div>
+<div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-400 w-[80%] rounded-full" title="Interés"></div>
+</div>
+<div class="w-16 text-right font-medium text-rose-500">$21.5k</div>
+</div>
+<div class="flex items-center gap-3 text-sm">
+<div class="w-12 font-bold text-slate-500">2026</div>
+<div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-400 w-[75%] rounded-full" title="Interés"></div>
+</div>
+<div class="w-16 text-right font-medium text-rose-500">$20.8k</div>
+</div>
+</div>
+</div>
+<div class="premium-card p-6 border-l-4 border-l-emerald-500">
+<div class="flex justify-between items-start mb-6">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-emerald-500">savings</span>
+<h3 class="font-bold text-lg text-slate-900">Rendimiento (Yield)</h3>
+</div>
+<p class="text-xs text-slate-500 font-medium">Análisis de flujo de caja anual</p>
+</div>
+<div class="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+<span class="text-emerald-600 font-bold text-2xl">6.2%</span>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center py-2 border-b border-slate-100">
+<span class="text-sm font-medium text-slate-600">Ingreso Bruto Anual</span>
+<span class="text-sm font-bold text-slate-900">$52,800</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-slate-100">
+<span class="text-sm font-medium text-slate-600">Gastos Operativos</span>
+<span class="text-sm font-medium text-rose-500">-$8,400</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-slate-100">
+<span class="text-sm font-medium text-slate-600">Servicio de Deuda</span>
+<span class="text-sm font-medium text-rose-500">-$22,200</span>
+</div>
+<div class="flex justify-between items-center pt-2">
+<span class="text-sm font-bold text-slate-900">Cash Flow Neto</span>
+<span class="text-base font-bold text-emerald-600">+$22,200</span>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100">
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span class="material-symbols-outlined text-amber-500" style="font-size: 16px;">info</span>
+<span>Basado en una ocupación del 95%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-4 flex flex-col gap-6">
+<div class="premium-card p-6">
+<h3 class="font-bold text-slate-900 mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-500">handyman</span> Reservas de Mantenimiento
+            </h3>
+<div class="mb-6">
+<div class="flex justify-between items-end mb-2">
+<span class="text-2xl font-bold text-slate-900">$8,200</span>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Meta: $15k</span>
+</div>
+<div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-2">
+<div class="h-full bg-gradient-to-r from-blue-500 to-blue-400 w-[54%] rounded-full shadow-[0_0_10px_rgba(59,130,246,0.3)]"></div>
+</div>
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+<span>Bajo</span>
+<span>Saludable</span>
+<span>Óptimo</span>
+</div>
+</div>
+<h4 class="text-xs font-bold text-slate-900 mb-3">Últimas Intervenciones</h4>
+<div class="space-y-3">
+<div class="flex gap-3 items-start">
+<div class="mt-0.5 min-w-[6px] h-[6px] rounded-full bg-slate-300"></div>
+<div class="text-xs">
+<p class="text-slate-900 font-medium">Reparación Aire Acondicionado</p>
+<p class="text-slate-500">12 Ago, 2023 • $340</p>
+</div>
+</div>
+<div class="flex gap-3 items-start">
+<div class="mt-0.5 min-w-[6px] h-[6px] rounded-full bg-slate-300"></div>
+<div class="text-xs">
+<p class="text-slate-900 font-medium">Pintura Fachada (Derrama)</p>
+<p class="text-slate-500">05 Jun, 2023 • $1,200</p>
+</div>
+</div>
+</div>
+</div>
+<div class="premium-card p-6">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-bold text-slate-900 flex items-center gap-2">
+<span class="material-symbols-outlined text-indigo-500">group</span> Inquilinos
+                </h3>
+<span class="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-100 uppercase">Activo</span>
+</div>
+<div class="flex items-center gap-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+<div class="relative">
+<img alt="Tenant" class="size-12 rounded-full object-cover ring-2 ring-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA80kQC0D7vLUOe7sTe_pNFM9feaaEkXe6E2pekvbZDk_oOGK6FxRe20lbuT9KkY5ljsvp_SCL5XsqwVFVGC536JBFgmoBbJPQ6xn1-ojkh1JjlEi3XUUlEOUHpAeW6hVxRdW4UhsMW53B8kQuMPrednhicmEPj5IXi8PLhmRVxIk0XHeNRZTRPNcGD7FvZKU_VNpOlCMOqVmdFlfitHopJgzCTY5DXfvaFEbSWavdT-XufhdNMIsPkfp3EUp4rv9Fnhbl2Wznelak"/>
+<span class="absolute bottom-0 right-0 size-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 text-sm">Marc &amp; Ana</h4>
+<p class="text-xs text-slate-500 font-medium">Contrato hasta: Dic 2025</p>
+<div class="flex gap-2 mt-1">
+<span class="text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600 font-medium">$4,400/mes</span>
+</div>
+</div>
+</div>
+<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Historial de Pagos</h4>
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-default">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-emerald-500"></div>
+<span class="text-sm font-medium text-slate-700">Octubre</span>
+</div>
+<span class="text-xs font-bold text-emerald-600">Pagado</span>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-default">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-emerald-500"></div>
+<span class="text-sm font-medium text-slate-700">Septiembre</span>
+</div>
+<span class="text-xs font-bold text-emerald-600">Pagado</span>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-default">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-emerald-500"></div>
+<span class="text-sm font-medium text-slate-700">Agosto</span>
+</div>
+<span class="text-xs font-bold text-emerald-600">Pagado</span>
+</div>
+</div>
+</div>
+<div class="premium-card border border-dashed border-slate-300 bg-slate-50/50 p-6 flex flex-col items-center justify-center text-center hover:bg-white hover:border-primary/50 transition-all cursor-pointer group">
+<div class="size-12 bg-white rounded-full shadow-sm border border-slate-200 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">add_box</span>
+</div>
+<h3 class="font-bold text-slate-900 text-sm mb-1">Definir Nueva Entidad</h3>
+<p class="text-xs text-slate-500 max-w-[200px]">Agrega campos personalizados o conecta servicios externos a este activo.</p>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Wealth OS Mission Control Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981",secondary: "#334155","background": "#f8fafc","surface": "#ffffff",},
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.75rem","2xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer components {
+            .premium-card {
+                @apply bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-xl transition-all duration-300;
+            }
+            .glass-overlay {
+                @apply bg-white/70 backdrop-blur-md border border-white/40;
+            }
+        }::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-background text-slate-900 font-display min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white">
+<header class="glass-overlay sticky top-0 z-50 w-full border-b border-slate-200 px-6 py-4">
+<div class="max-w-[1600px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-10">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-white" style="font-size: 24px;">account_balance_wallet</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 leading-none">Wealth OS</h1>
+<p class="text-[10px] text-slate-500 font-bold tracking-[0.1em] mt-0.5 uppercase">Mission Control</p>
+</div>
+</div>
+<nav class="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200">
+<a class="px-4 py-2 rounded-full bg-white shadow-sm text-slate-900 text-sm font-semibold" href="#">Dashboard</a>
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Assets</a>
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Liabilities</a>
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Vault</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-white border border-slate-200 rounded-full px-3 py-2 w-64 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-slate-400 mr-2" style="font-size: 20px;">search</span>
+<input class="bg-transparent border-none text-sm text-slate-900 placeholder-slate-400 focus:ring-0 w-full p-0" placeholder="Search assets, docs..." type="text"/>
+<span class="text-[10px] text-slate-400 font-mono px-1.5 py-0.5 rounded border border-slate-200">⌘K</span>
+</div>
+<button class="size-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors relative">
+<span class="material-symbols-outlined" style="font-size: 20px;">notifications</span>
+<span class="absolute top-2.5 right-2.5 size-2 bg-rose-500 rounded-full border-2 border-white"></span>
+</button>
+<div class="h-10 w-10 rounded-full border border-slate-200 overflow-hidden ring-2 ring-white">
+<img alt="User Profile" class="object-cover w-full h-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnTmXsVy3mTlq5iVBHF0lf4F0RBfq5K6293fhY6Cto-ygkzuL97gewlACqU7GY67UiziEVJQCCegsX_z1vTMQoHhq0iu9xZ-EwUOOr34ZIVAeg4phi9LrP-E4oy4PXuAqHRkf2Nv1QCNk2tue1shKIBP3qsW8lU1XP76srTCmPjaczxCT-FPKOSlFTcA2fEEjaBq1TPEDWURNETzIJwslvR2CE7MNbdNHSWX5HI9MqFVk18ZQ4qIcywMJ9-yTfgjUxHwYiBuTGQP4"/>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 p-6 lg:p-8 max-w-[1600px] mx-auto w-full">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="premium-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-slate-900" style="font-size: 48px;">monitoring</span>
+</div>
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Net Worth</p>
+<div class="flex items-baseline gap-3">
+<h3 class="text-3xl font-bold text-slate-900 tracking-tight">$2.4M</h3>
+<span class="inline-flex items-center text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+<span class="material-symbols-outlined mr-0.5" style="font-size: 14px;">trending_up</span> +12%
+                </span>
+</div>
+<div class="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 w-[75%] rounded-full"></div>
+</div>
+</div>
+<div class="premium-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-slate-900" style="font-size: 48px;">pie_chart</span>
+</div>
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">LTV Ratio</p>
+<div class="flex items-baseline gap-3">
+<h3 class="text-3xl font-bold text-slate-900 tracking-tight">42%</h3>
+<span class="inline-flex items-center text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                    Safe
+                </span>
+</div>
+<div class="mt-4 flex gap-1">
+<div class="h-1.5 flex-1 bg-emerald-500 rounded-l-full"></div>
+<div class="h-1.5 flex-1 bg-emerald-500/50"></div>
+<div class="h-1.5 flex-1 bg-slate-200"></div>
+<div class="h-1.5 flex-1 bg-slate-200 rounded-r-full"></div>
+</div>
+</div>
+<div class="premium-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-slate-900" style="font-size: 48px;">payments</span>
+</div>
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Monthly FCF</p>
+<div class="flex items-baseline gap-3">
+<h3 class="text-3xl font-bold text-slate-900 tracking-tight">$12.5k</h3>
+<span class="inline-flex items-center text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+<span class="material-symbols-outlined mr-0.5" style="font-size: 14px;">trending_up</span> +5%
+                </span>
+</div>
+<div class="mt-4 flex justify-between text-xs font-medium text-slate-500">
+<span>In: $32k</span>
+<span class="text-rose-500">Out: $19.5k</span>
+</div>
+</div>
+<div class="premium-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-slate-900" style="font-size: 48px;">flag</span>
+</div>
+<div class="flex justify-between items-end mb-1">
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider">FI Goal</p>
+<p class="text-slate-900 text-sm font-bold">68%</p>
+</div>
+<h3 class="text-2xl font-bold text-slate-900 tracking-tight mb-4">Target: $3.5M</h3>
+<div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative">
+<div class="absolute top-0 left-0 h-full bg-primary w-[68%] rounded-full"></div>
+<div class="absolute top-0 left-[68%] h-full w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.1)]"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+<div class="flex flex-col gap-6">
+<h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-slate-900" style="font-size: 18px;">domain</span> Active Assets
+            </h2>
+<div class="premium-card overflow-hidden flex flex-col hover:border-emerald-200">
+<div class="h-36 w-full bg-cover bg-center relative" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCdkD4AEJx2-Cj3S40t9ahjTHhw4bZngo8_C6fpKUlTgJJWVD5v2xsgXYm0hA1TO1wQSqlvloOMu--8WLFTZ_4L0V9_BBWLqA72P-kDhXymprSmldheQms9Z0m5QGXcTdGMlgK2qwrVO8808WmtD2T8Ikas2gxHGRAv5rtOzO0AVqqG5Jc89FXyCJq4x-pY00DVtGqylJG9hqGvpKMjkxoiLNMyRnoCIGnakrYCrnbEXU-lNaH7GyQ_HQ64wLB3HpMunk92sBUSZaM');">
+<div class="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent"></div>
+<div class="absolute bottom-3 left-4">
+<h3 class="text-white font-bold text-lg drop-shadow-sm">Barcelona Loft</h3>
+<p class="text-white/80 text-xs font-medium">Poble Sec, Barcelona</p>
+</div>
+<div class="absolute top-3 right-3 glass-overlay px-2 py-1 rounded text-[10px] text-slate-900 font-bold border border-white/50 shadow-sm uppercase">
+                        Real Estate
+                    </div>
+</div>
+<div class="p-5">
+<div class="grid grid-cols-2 gap-4 mb-4">
+<div>
+<p class="text-slate-400 text-[10px] uppercase tracking-wider font-bold">Current Value</p>
+<p class="text-slate-900 font-bold text-xl">$850k</p>
+</div>
+<div>
+<p class="text-slate-400 text-[10px] uppercase tracking-wider font-bold">Mortgage</p>
+<p class="text-rose-500 font-bold text-xl">$400k</p>
+</div>
+</div>
+<div class="flex items-center justify-between text-sm mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+<span class="text-slate-500 font-medium">Annual Yield</span>
+<span class="text-emerald-600 font-bold font-mono">6.2%</span>
+</div>
+<div>
+<div class="flex justify-between text-xs text-slate-500 font-medium mb-1.5">
+<span>Reserves Health</span>
+<span class="text-emerald-600">Good</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 w-[85%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="premium-card overflow-hidden flex flex-col hover:border-emerald-200">
+<div class="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<div class="size-8 rounded bg-indigo-600 flex items-center justify-center text-white font-bold shadow-sm shadow-indigo-200">S</div>
+<h3 class="text-slate-900 font-bold text-lg">SaaS Ventures</h3>
+</div>
+<p class="text-slate-500 text-xs font-medium">B2B Micro-SaaS Portfolio</p>
+</div>
+<div class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold border border-indigo-100 uppercase">
+                        Business
+                    </div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-end mb-4">
+<div>
+<p class="text-slate-400 text-[10px] uppercase tracking-wider font-bold">MRR</p>
+<p class="text-slate-900 font-bold text-2xl">$45,000<span class="text-sm text-slate-400 font-medium">/mo</span></p>
+</div>
+<div class="text-right">
+<span class="text-emerald-600 text-sm font-bold bg-emerald-50 px-2 py-0.5 rounded">+8.4% MoM</span>
+</div>
+</div>
+<div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+<p class="text-slate-400 text-[10px] uppercase tracking-wider font-bold mb-3">Staff Overview</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Staff" class="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA80kQC0D7vLUOe7sTe_pNFM9feaaEkXe6E2pekvbZDk_oOGK6FxRe20lbuT9KkY5ljsvp_SCL5XsqwVFVGC536JBFgmoBbJPQ6xn1-ojkh1JjlEi3XUUlEOUHpAeW6hVxRdW4UhsMW53B8kQuMPrednhicmEPj5IXi8PLhmRVxIk0XHeNRZTRPNcGD7FvZKU_VNpOlCMOqVmdFlfitHopJgzCTY5DXfvaFEbSWavdT-XufhdNMIsPkfp3EUp4rv9Fnhbl2Wznelak"/>
+<img alt="Staff" class="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMrXm1_SaleldrsJC0HRgNZVtVkIrTu-9eyfpejbPN-6orZXJNbSnbaksYzUmliY6YGMX--POMHSA_wxaKbSS20GYz2OyXCG14OY2skv_vH3EUQejGPrvnjpiVoNbQA8bYiAq6-It3Bo_rh7cfYz4eioEeqwH4NhSzOHKWaZghFXG4juHXw9jiQSWPunIbMkgbRWnE1iIN9tcR8S9crxNbrCo-Z3HMpSNwzPPn9Vpua2FM9BthVHKzop6BaI-JRel9oON6hXmkUzU"/>
+<img alt="Staff" class="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsyq0iTdDejxYe1qilCDcw20O9G0laUEObEdTQAIhQrnTIjIVgkDSmB88P5CsjmHZoaGcWfDzqNJ4mJDGFQY6nR4HBYG4x8IEh8YdZs3sW7c5HKMrA9lwMn2x0hQiqE8aRo1lcKI6SjxOPq25gLwLJl93kxwomHgj0OonxIzWXeUKtR3nmz7uW9OlBEu-ebHlHSv0MUcSgcfqcM5NWQKpx5zUeJygRE-twt8pPHBLCUk2PI2gI7f8ITpmjqkrbwUSkYmtaFBdHPVU"/>
+<div class="h-8 w-8 rounded-full ring-2 ring-white bg-slate-200 flex items-center justify-center text-[10px] text-slate-600 font-bold">+1</div>
+</div>
+<div class="text-right">
+<p class="text-slate-900 font-bold text-sm">$18k</p>
+<p class="text-slate-500 text-[10px] font-medium">Monthly Payroll</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-6">
+<h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-slate-900" style="font-size: 18px;">hub</span> Operations Hub
+            </h2>
+<div class="premium-card p-5 flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<h3 class="text-slate-900 font-bold text-base">AI Ingestion</h3>
+<span class="flex h-2 w-2 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+</div>
+<div class="border-2 border-dashed border-slate-200 hover:border-primary/50 hover:bg-emerald-50/30 transition-all rounded-lg p-6 flex flex-col items-center justify-center text-center group cursor-pointer">
+<div class="size-12 bg-slate-50 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary" style="font-size: 24px;">cloud_upload</span>
+</div>
+<p class="text-slate-700 text-sm font-bold">Drop statements here</p>
+<p class="text-slate-400 text-[10px] font-medium mt-1">CSV, XLS supported. AI auto-tagging active.</p>
+</div>
+<div class="space-y-4 mt-2">
+<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Recent Processing</p>
+<div class="flex gap-4 relative pb-4 border-l border-slate-100 pl-4 last:border-0 last:pb-0">
+<div class="absolute -left-[4.5px] top-1.5 size-2 rounded-full bg-primary shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 text-sm font-bold">Stripe Payout #9921</p>
+<span class="text-slate-400 text-[10px] font-medium">2m ago</span>
+</div>
+<div class="flex gap-2 mt-2 flex-wrap">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-600 border border-purple-100">REVENUE</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">SAAS</span>
+</div>
+</div>
+</div>
+<div class="flex gap-4 relative pb-4 border-l border-slate-100 pl-4 last:border-0 last:pb-0">
+<div class="absolute -left-[4.5px] top-1.5 size-2 rounded-full bg-slate-300"></div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 text-sm font-bold">Mortgage Payment</p>
+<span class="text-slate-400 text-[10px] font-medium">4h ago</span>
+</div>
+<div class="flex gap-2 mt-2 flex-wrap">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100">AMORTIZATION</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-100">LIABILITY</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="premium-card p-5">
+<h3 class="text-slate-900 font-bold text-base mb-4">Ghost Money Reserves</h3>
+<div class="space-y-4">
+<div class="bg-slate-50/50 rounded-lg p-3 border border-slate-100">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500" style="font-size: 18px;">account_balance</span>
+<span class="text-slate-700 text-sm font-bold">Tax Vault (VAT/IRPF)</span>
+</div>
+<span class="text-slate-900 font-bold text-sm">$12,450</span>
+</div>
+<div class="h-1.5 w-full bg-slate-200/50 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 w-[60%] rounded-full"></div>
+</div>
+<p class="text-right text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-tighter">Due: Oct 20th</p>
+</div>
+<div class="bg-slate-50/50 rounded-lg p-3 border border-slate-100">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-500" style="font-size: 18px;">handyman</span>
+<span class="text-slate-700 text-sm font-bold">Maintenance</span>
+</div>
+<span class="text-slate-900 font-bold text-sm">$8,200</span>
+</div>
+<div class="h-1.5 w-full bg-slate-200/50 rounded-full overflow-hidden">
+<div class="h-full bg-blue-500 w-[42%] rounded-full"></div>
+</div>
+<p class="text-right text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-tighter">Safe Level: $15k</p>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-6">
+<h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-slate-900" style="font-size: 18px;">construction</span> Projects &amp; Vault
+            </h2>
+<div class="premium-card p-5 border-l-4 border-l-primary">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-slate-900 font-bold text-base">BCN Loft Renovation</h3>
+<p class="text-slate-500 text-[10px] font-medium mt-0.5">Kitchen &amp; Bathroom upgrade</p>
+</div>
+<label class="inline-flex items-center cursor-pointer">
+<span class="mr-2 text-[10px] text-slate-400 font-bold uppercase tracking-tight">Capitalize</span>
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="relative w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-5">
+<div class="p-3 rounded-lg bg-slate-50 border border-slate-100">
+<p class="text-slate-400 text-[10px] uppercase tracking-wider font-bold">Budgeted</p>
+<p class="text-slate-900 font-bold">$120k</p>
+</div>
+<div class="p-3 rounded-lg bg-slate-50 border border-slate-100">
+<p class="text-slate-400 text-[10px] uppercase tracking-wider font-bold">Actual</p>
+<p class="text-amber-600 font-bold">$85k</p>
+</div>
+</div>
+<div class="relative">
+<div class="flex mb-2 items-center justify-between">
+<div>
+<span class="text-[10px] font-bold uppercase tracking-wider py-1 px-2 rounded-md text-emerald-700 bg-emerald-50 border border-emerald-100">
+                                In Progress
+                            </span>
+</div>
+<div class="text-right">
+<span class="text-xs font-bold text-emerald-600">70%</span>
+</div>
+</div>
+<div class="overflow-hidden h-2 mb-2 flex rounded bg-slate-100">
+<div class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary" style="width:70%"></div>
+</div>
+</div>
+</div>
+<div class="premium-card p-5 flex-1">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-slate-900 font-bold text-base">Document Vault</h3>
+<button class="text-slate-400 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-white hover:border-primary/30 transition-all cursor-pointer group shadow-sm">
+<div class="flex items-start justify-between mb-2">
+<span class="material-symbols-outlined text-rose-500 text-2xl group-hover:scale-110 transition-transform">description</span>
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<p class="text-slate-900 text-xs font-bold truncate">Property Deed</p>
+<p class="text-slate-400 text-[9px] font-medium">BCN Loft • PDF</p>
+</div>
+<div class="p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-white hover:border-primary/30 transition-all cursor-pointer group shadow-sm">
+<div class="flex items-start justify-between mb-2">
+<span class="material-symbols-outlined text-blue-500 text-2xl group-hover:scale-110 transition-transform">contract</span>
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<p class="text-slate-900 text-xs font-bold truncate">SaaS Inccorp</p>
+<p class="text-slate-400 text-[9px] font-medium">Delaware • PDF</p>
+</div>
+<div class="p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-white hover:border-primary/30 transition-all cursor-pointer group shadow-sm">
+<div class="flex items-start justify-between mb-2">
+<span class="material-symbols-outlined text-amber-500 text-2xl group-hover:scale-110 transition-transform">folder_managed</span>
+<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-100">12D LEFT</span>
+</div>
+<p class="text-slate-900 text-xs font-bold truncate">Insurance Policy</p>
+<p class="text-slate-400 text-[9px] font-medium">Expires in 12d</p>
+</div>
+<div class="p-3 rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:text-primary hover:border-primary/50 transition-all cursor-pointer">
+<span class="material-symbols-outlined text-xl mb-1">add</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Upload</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

@@ -1,0 +1,8 @@
+﻿src/app/api/projects/[id]/expenses/route.ts(19,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/app/api/projects/[id]/expenses/route.ts(20,22): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/api/projects/[id]/expenses/route.ts(20,27): error TS7006: Parameter 'curr' implicitly has an 'any' type.
+src/components/ui/PieChart.tsx(40,25): error TS2322: Type '(value: number) => string' is not assignable to type 'Formatter<number, NameType> & ((value: number, name: NameType, item: Payload<number, NameType>, index: number, payload: Payload<number, NameType>[]) => ReactNode | [...])'.
+  Type '(value: number) => string' is not assignable to type 'Formatter<number, NameType>'.
+    Types of parameters 'value' and 'value' are incompatible.
+      Type 'number | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.

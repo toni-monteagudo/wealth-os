@@ -1,0 +1,151 @@
+﻿src/app/activos/[id]/AssetDetailClient.tsx(5,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/app/activos/[id]/AssetDetailClient.tsx(6,24): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/app/activos/[id]/AssetDetailClient.tsx(7,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/app/activos/[id]/AssetDetailClient.tsx(8,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/app/activos/[id]/AssetDetailClient.tsx(127,57): error TS7006: Parameter 'tenant' implicitly has an 'any' type.
+src/app/activos/[id]/AssetDetailClient.tsx(127,65): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/api/assets/[id]/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/assets/[id]/route.ts(3,19): error TS2307: Cannot find module '@/models/Asset' or its corresponding type declarations.
+src/app/api/assets/[id]/route.ts(4,23): error TS2307: Cannot find module '@/models/Liability' or its corresponding type declarations.
+src/app/api/assets/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/assets/route.ts(3,19): error TS2307: Cannot find module '@/models/Asset' or its corresponding type declarations.
+src/app/api/documents/[id]/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/documents/[id]/route.ts(3,22): error TS2307: Cannot find module '@/models/Document' or its corresponding type declarations.
+src/app/api/documents/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/documents/route.ts(3,22): error TS2307: Cannot find module '@/models/Document' or its corresponding type declarations.
+src/app/api/kpis/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/kpis/route.ts(3,19): error TS2307: Cannot find module '@/models/Asset' or its corresponding type declarations.
+src/app/api/kpis/route.ts(4,23): error TS2307: Cannot find module '@/models/Liability' or its corresponding type declarations.
+src/app/api/kpis/route.ts(5,25): error TS2307: Cannot find module '@/models/Transaction' or its corresponding type declarations.
+src/app/api/kpis/route.ts(6,30): error TS2307: Cannot find module '@/lib/seed' or its corresponding type declarations.
+src/app/api/kpis/route.ts(18,44): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/api/kpis/route.ts(18,49): error TS7006: Parameter 'curr' implicitly has an 'any' type.
+src/app/api/kpis/route.ts(19,47): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/api/kpis/route.ts(19,52): error TS7006: Parameter 'curr' implicitly has an 'any' type.
+src/app/api/kpis/route.ts(26,42): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/api/kpis/route.ts(27,45): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/api/kpis/route.ts(27,50): error TS7006: Parameter 'curr' implicitly has an 'any' type.
+src/app/api/liabilities/[id]/link/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/liabilities/[id]/link/route.ts(3,23): error TS2307: Cannot find module '@/models/Liability' or its corresponding type declarations.
+src/app/api/liabilities/[id]/link/route.ts(4,19): error TS2307: Cannot find module '@/models/Asset' or its corresponding type declarations.
+src/app/api/liabilities/[id]/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/liabilities/[id]/route.ts(3,23): error TS2307: Cannot find module '@/models/Liability' or its corresponding type declarations.
+src/app/api/liabilities/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/liabilities/route.ts(3,23): error TS2307: Cannot find module '@/models/Liability' or its corresponding type declarations.
+src/app/api/projects/[id]/expenses/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/projects/[id]/expenses/route.ts(3,21): error TS2307: Cannot find module '@/models/Project' or its corresponding type declarations.
+src/app/api/projects/[id]/expenses/route.ts(19,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/app/api/projects/[id]/expenses/route.ts(20,22): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/api/projects/[id]/expenses/route.ts(20,27): error TS7006: Parameter 'curr' implicitly has an 'any' type.
+src/app/api/projects/[id]/notes/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/projects/[id]/notes/route.ts(3,21): error TS2307: Cannot find module '@/models/Project' or its corresponding type declarations.
+src/app/api/projects/[id]/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/projects/[id]/route.ts(3,21): error TS2307: Cannot find module '@/models/Project' or its corresponding type declarations.
+src/app/api/projects/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/projects/route.ts(3,21): error TS2307: Cannot find module '@/models/Project' or its corresponding type declarations.
+src/app/api/reserves/[id]/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/reserves/[id]/route.ts(3,21): error TS2307: Cannot find module '@/models/Reserve' or its corresponding type declarations.
+src/app/api/reserves/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/reserves/route.ts(3,21): error TS2307: Cannot find module '@/models/Reserve' or its corresponding type declarations.
+src/app/api/transactions/[id]/confirm/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/transactions/[id]/confirm/route.ts(3,25): error TS2307: Cannot find module '@/models/Transaction' or its corresponding type declarations.
+src/app/api/transactions/[id]/confirm/route.ts(4,21): error TS2307: Cannot find module '@/models/Reserve' or its corresponding type declarations.
+src/app/api/transactions/[id]/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/transactions/[id]/route.ts(3,25): error TS2307: Cannot find module '@/models/Transaction' or its corresponding type declarations.
+src/app/api/transactions/[id]/split/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/transactions/[id]/split/route.ts(3,25): error TS2307: Cannot find module '@/models/Transaction' or its corresponding type declarations.
+src/app/api/transactions/ingest/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/transactions/ingest/route.ts(3,25): error TS2307: Cannot find module '@/models/Transaction' or its corresponding type declarations.
+src/app/api/transactions/route.ts(2,23): error TS2307: Cannot find module '@/lib/mongodb' or its corresponding type declarations.
+src/app/api/transactions/route.ts(3,25): error TS2307: Cannot find module '@/models/Transaction' or its corresponding type declarations.
+src/app/boveda/page.tsx(5,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/app/boveda/page.tsx(6,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/app/boveda/page.tsx(7,37): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/app/boveda/page.tsx(8,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/app/boveda/page.tsx(9,29): error TS2307: Cannot find module '@/components/ui/ProgressBar' or its corresponding type declarations.
+src/app/boveda/page.tsx(20,42): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/boveda/page.tsx(20,47): error TS7006: Parameter 'curr' implicitly has an 'any' type.
+src/app/boveda/page.tsx(21,43): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/boveda/page.tsx(21,48): error TS7006: Parameter 'curr' implicitly has an 'any' type.
+src/app/boveda/page.tsx(48,45): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/app/boveda/page.tsx(129,43): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/app/ingesta/page.tsx(5,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/app/ingesta/page.tsx(6,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/app/ingesta/page.tsx(7,30): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/app/ingesta/page.tsx(8,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/app/ingesta/page.tsx(9,23): error TS2307: Cannot find module '@/components/ui/Badge' or its corresponding type declarations.
+src/app/ingesta/page.tsx(10,29): error TS2307: Cannot find module '@/components/ui/ProgressBar' or its corresponding type declarations.
+src/app/ingesta/page.tsx(17,42): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/app/ingesta/page.tsx(18,40): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/app/ingesta/page.tsx(141,51): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/app/ingesta/page.tsx(151,67): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/app/layout.tsx(4,30): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/app/layout.tsx(5,24): error TS2307: Cannot find module '@/components/Header' or its corresponding type declarations.
+src/app/page.tsx(4,20): error TS2307: Cannot find module '@/components/dashboard/KpiRow' or its corresponding type declarations.
+src/app/page.tsx(5,30): error TS2307: Cannot find module '@/components/dashboard/ActiveAssetsList' or its corresponding type declarations.
+src/app/page.tsx(6,27): error TS2307: Cannot find module '@/components/dashboard/OperationsHub' or its corresponding type declarations.
+src/app/page.tsx(7,32): error TS2307: Cannot find module '@/components/dashboard/ProjectVaultColumn' or its corresponding type declarations.
+src/app/proyectos/[id]/page.tsx(5,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/app/proyectos/[id]/page.tsx(6,26): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/app/proyectos/[id]/page.tsx(7,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/app/proyectos/[id]/page.tsx(8,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/app/proyectos/[id]/page.tsx(65,60): error TS7006: Parameter 'exp' implicitly has an 'any' type.
+src/app/proyectos/[id]/page.tsx(65,65): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/proyectos/[id]/page.tsx(136,49): error TS7006: Parameter 'note' implicitly has an 'any' type.
+src/app/proyectos/[id]/page.tsx(136,55): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/components/dashboard/ActiveAssetsList.tsx(6,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/components/dashboard/ActiveAssetsList.tsx(7,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/components/dashboard/ActiveAssetsList.tsx(8,36): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/dashboard/ActiveAssetsList.tsx(9,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/components/dashboard/ActiveAssetsList.tsx(10,29): error TS2307: Cannot find module '@/components/ui/ProgressBar' or its corresponding type declarations.
+src/components/dashboard/ActiveAssetsList.tsx(28,27): error TS7006: Parameter 'asset' implicitly has an 'any' type.
+src/components/dashboard/ActiveAssetsList.tsx(30,59): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/components/dashboard/ActiveAssetsList.tsx(112,72): error TS7006: Parameter 'emp' implicitly has an 'any' type.
+src/components/dashboard/ActiveAssetsList.tsx(112,77): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/dashboard/KpiRow.tsx(5,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/components/dashboard/KpiRow.tsx(6,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/components/dashboard/KpiRow.tsx(7,23): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/dashboard/KpiRow.tsx(8,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/components/dashboard/OperationsHub.tsx(5,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/components/dashboard/OperationsHub.tsx(6,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/components/dashboard/OperationsHub.tsx(7,40): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/dashboard/OperationsHub.tsx(8,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/components/dashboard/OperationsHub.tsx(9,29): error TS2307: Cannot find module '@/components/ui/ProgressBar' or its corresponding type declarations.
+src/components/dashboard/OperationsHub.tsx(10,23): error TS2307: Cannot find module '@/components/ui/Badge' or its corresponding type declarations.
+src/components/dashboard/OperationsHub.tsx(80,45): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/components/dashboard/OperationsHub.tsx(121,53): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/components/dashboard/ProjectVaultColumn.tsx(6,29): error TS2307: Cannot find module '@/components/ui/PremiumCard' or its corresponding type declarations.
+src/components/dashboard/ProjectVaultColumn.tsx(7,24): error TS2307: Cannot find module '@/hooks/useApi' or its corresponding type declarations.
+src/components/dashboard/ProjectVaultColumn.tsx(8,37): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/dashboard/ProjectVaultColumn.tsx(9,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/components/dashboard/ProjectVaultColumn.tsx(10,29): error TS2307: Cannot find module '@/components/ui/ProgressBar' or its corresponding type declarations.
+src/components/dashboard/ProjectVaultColumn.tsx(11,23): error TS2307: Cannot find module '@/components/ui/Badge' or its corresponding type declarations.
+src/components/dashboard/ProjectVaultColumn.tsx(38,41): error TS7006: Parameter 'proj' implicitly has an 'any' type.
+src/components/dashboard/ProjectVaultColumn.tsx(85,54): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/components/dashboard/ProjectVaultColumn.tsx(85,59): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/components/dashboard/ProjectVaultColumn.tsx(91,38): error TS2304: Cannot find name 'FileSpreadsheet'.
+src/components/Header.tsx(7,25): error TS2307: Cannot find module '@/i18n/I18nContext' or its corresponding type declarations.
+src/components/Header.tsx(8,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/components/ui/Badge.tsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/components/ui/FormField.tsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/components/ui/Modal.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/components/ui/PieChart.tsx(40,25): error TS2322: Type '(value: number) => string' is not assignable to type 'Formatter<number, NameType> & ((value: number, name: NameType, item: Payload<number, NameType>, index: number, payload: Payload<number, NameType>[]) => ReactNode | [...])'.
+  Type '(value: number) => string' is not assignable to type 'Formatter<number, NameType>'.
+    Types of parameters 'value' and 'value' are incompatible.
+      Type 'number | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+src/components/ui/PremiumCard.tsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/components/ui/ProgressBar.tsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/components/ui/Toggle.tsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/lib/seed.ts(2,19): error TS2307: Cannot find module '@/models/Asset' or its corresponding type declarations.
+src/lib/seed.ts(3,23): error TS2307: Cannot find module '@/models/Liability' or its corresponding type declarations.
+src/lib/seed.ts(4,25): error TS2307: Cannot find module '@/models/Transaction' or its corresponding type declarations.
+src/lib/seed.ts(5,21): error TS2307: Cannot find module '@/models/Reserve' or its corresponding type declarations.
+src/lib/seed.ts(6,21): error TS2307: Cannot find module '@/models/Project' or its corresponding type declarations.
+src/lib/seed.ts(7,22): error TS2307: Cannot find module '@/models/Document' or its corresponding type declarations.
+src/models/Asset.ts(2,24): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/models/Document.ts(2,27): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/models/Liability.ts(2,28): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/models/Project.ts(2,26): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/models/Reserve.ts(2,26): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/models/Transaction.ts(2,30): error TS2307: Cannot find module '@/types' or its corresponding type declarations.

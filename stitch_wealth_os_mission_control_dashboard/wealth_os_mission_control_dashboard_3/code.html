@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hub de Ingesta IA y Transacciones</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981",
+                        secondary: "#334155",
+                        background: "#f8fafc",
+                        surface: "#ffffff",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.75rem",
+                        "2xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer components {
+            .premium-card {
+                @apply bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-xl transition-all duration-300;
+            }
+            .glass-overlay {
+                @apply bg-white/80 backdrop-blur-md border border-white/40;
+            }
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        .animate-pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-background text-slate-900 font-display min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white">
+<header class="glass-overlay sticky top-0 z-50 w-full border-b border-slate-200 px-6 py-4">
+<div class="max-w-[1600px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-10">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-white" style="font-size: 24px;">account_balance_wallet</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 leading-none">Wealth OS</h1>
+<p class="text-[10px] text-slate-500 font-bold tracking-[0.1em] mt-0.5 uppercase">Mission Control</p>
+</div>
+</div>
+<nav class="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200">
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Dashboard</a>
+<a class="px-4 py-2 rounded-full bg-white shadow-sm text-slate-900 text-sm font-semibold" href="#">Ingesta IA</a>
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Activos</a>
+<a class="px-4 py-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white/50 text-sm font-medium transition-all" href="#">Bóveda</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-white border border-slate-200 rounded-full px-3 py-2 w-64 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-slate-400 mr-2" style="font-size: 20px;">search</span>
+<input class="bg-transparent border-none text-sm text-slate-900 placeholder-slate-400 focus:ring-0 w-full p-0" placeholder="Buscar transacción..." type="text"/>
+<span class="text-[10px] text-slate-400 font-mono px-1.5 py-0.5 rounded border border-slate-200">⌘K</span>
+</div>
+<button class="size-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors relative">
+<span class="material-symbols-outlined" style="font-size: 20px;">notifications</span>
+<span class="absolute top-2.5 right-2.5 size-2 bg-rose-500 rounded-full border-2 border-white"></span>
+</button>
+<div class="h-10 w-10 rounded-full border border-slate-200 overflow-hidden ring-2 ring-white">
+<img alt="User Profile" class="object-cover w-full h-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnTmXsVy3mTlq5iVBHF0lf4F0RBfq5K6293fhY6Cto-ygkzuL97gewlACqU7GY67UiziEVJQCCegsX_z1vTMQoHhq0iu9xZ-EwUOOr34ZIVAeg4phi9LrP-E4oy4PXuAqHRkf2Nv1QCNk2tue1shKIBP3qsW8lU1XP76srTCmPjaczxCT-FPKOSlFTcA2fEEjaBq1TPEDWURNETzIJwslvR2CE7MNbdNHSWX5HI9MqFVk18ZQ4qIcywMJ9-yTfgjUxHwYiBuTGQP4"/>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 p-6 lg:p-8 max-w-[1200px] mx-auto w-full space-y-8">
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 premium-card p-0 overflow-hidden flex flex-col relative min-h-[300px]">
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(16,185,129,0.1),transparent_70%)]"></div>
+<div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-sm z-10">
+<div>
+<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">smart_toy</span>
+                            Hub de Ingesta IA
+                        </h2>
+<p class="text-slate-500 text-sm mt-0.5">Analizando extractos bancarios y documentos</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="flex h-2.5 w-2.5 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+</span>
+<span class="text-primary text-xs font-bold uppercase tracking-wider">Activo</span>
+</div>
+</div>
+<div class="flex-1 flex flex-col items-center justify-center p-8 relative">
+<div class="relative z-10 text-center">
+<div class="relative inline-flex items-center justify-center mb-6">
+<div class="absolute inset-0 rounded-full border border-primary/20 animate-pulse-ring"></div>
+<div class="absolute inset-0 rounded-full border border-primary/20 animate-pulse-ring" style="animation-delay: 0.5s"></div>
+<div class="size-20 bg-gradient-to-br from-white to-slate-50 rounded-full shadow-lg border border-slate-100 flex items-center justify-center relative z-20">
+<span class="material-symbols-outlined text-primary animate-pulse" style="font-size: 36px;">auto_fix_high</span>
+</div>
+</div>
+<h3 class="text-xl font-bold text-slate-900 mb-2">Analizando Extracto BBVA...</h3>
+<p class="text-slate-500 text-sm max-w-md mx-auto mb-6">La IA está categorizando transacciones, detectando anomalías y sugiriendo splits de amortización.</p>
+<div class="w-full max-w-sm mx-auto bg-slate-100 rounded-full h-1.5 overflow-hidden">
+<div class="h-full bg-primary animate-[shimmer_2s_infinite] relative w-3/4 rounded-full overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]"></div>
+</div>
+</div>
+<p class="text-xs text-slate-400 font-mono mt-2">78% Completado • 32 transacciones procesadas</p>
+</div>
+</div>
+</div>
+<div class="premium-card p-6 flex flex-col justify-between bg-gradient-to-b from-white to-slate-50">
+<div>
+<h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Resumen de Procesamiento</h3>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+<span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
+</div>
+<div>
+<p class="text-slate-900 text-sm font-bold">Identificadas</p>
+<p class="text-slate-400 text-xs">Confianza alta</p>
+</div>
+</div>
+<span class="text-slate-900 font-mono font-bold text-lg">28</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+<span class="material-symbols-outlined" style="font-size: 18px;">warning</span>
+</div>
+<div>
+<p class="text-slate-900 text-sm font-bold">Requiere Revisión</p>
+<p class="text-slate-400 text-xs">Confianza media</p>
+</div>
+</div>
+<span class="text-slate-900 font-mono font-bold text-lg">4</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined" style="font-size: 18px;">call_split</span>
+</div>
+<div>
+<p class="text-slate-900 text-sm font-bold">Sugerencia Split</p>
+<p class="text-slate-400 text-xs">Hipotecas detectadas</p>
+</div>
+</div>
+<span class="text-slate-900 font-mono font-bold text-lg">1</span>
+</div>
+</div>
+</div>
+<div class="mt-6 pt-6 border-t border-slate-100">
+<button class="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-size: 18px;">stop_circle</span>
+                        Detener Análisis
+                    </button>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400">history</span>
+                    Línea de Tiempo
+                </h2>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">filter_list</span>
+                        Filtrar
+                    </button>
+<button class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">download</span>
+                        Exportar
+                    </button>
+</div>
+</div>
+<div class="premium-card overflow-hidden">
+<div class="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 bg-slate-50/50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+<div class="col-span-1 text-center">Fecha</div>
+<div class="col-span-4">Descripción</div>
+<div class="col-span-3">Categoría / Tags</div>
+<div class="col-span-2 text-right">Monto</div>
+<div class="col-span-2 text-center">Acciones</div>
+</div>
+<div class="group grid grid-cols-12 gap-4 p-4 items-center border-b border-slate-100 hover:bg-slate-50 transition-colors relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+<div class="col-span-1 text-center">
+<div class="flex flex-col">
+<span class="text-slate-900 font-bold text-sm">24</span>
+<span class="text-slate-400 text-xs font-medium">OCT</span>
+</div>
+</div>
+<div class="col-span-4 flex items-center gap-3">
+<div class="size-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0">
+<img alt="Caixa" class="w-6 opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSUKazyGyCQCgzhuRmRbImu7pyoQQ2Y9jigb4J3NIkkIG73Kma2lvfGGEg9AD7NQ1UBh3cw-QahoPbc_B_mJYuQhfmTNmIlPJ27Lr4hHG9WvBCUXd--9VBp1WFnyH3z1rJnBMzrnSSRM_w-OThj7Eh-cgQqMROcr_xNYV6E0eo-Drty0GpUmhUq1AX-LVuuI1kF1shuKjUaM6kD9WLW48rx20PA4RJPQrb9DTcwMkOPn2xXAcPZX4RQvmI_ZTNPDsrqvK_p8XVATA"/>
+</div>
+<div>
+<p class="text-slate-900 font-bold text-sm">Préstamo Hipotecario 0049</p>
+<p class="text-slate-500 text-xs">CaixaBank • Cuota Mensual</p>
+</div>
+</div>
+<div class="col-span-3">
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">Hipoteca</span>
+</div>
+</div>
+<div class="col-span-2 text-right">
+<p class="text-slate-900 font-bold font-mono text-sm">-1.245,00 €</p>
+</div>
+<div class="col-span-2 flex justify-center">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200 transition-colors shadow-sm group-hover:scale-105 transform duration-200">
+<span class="material-symbols-outlined" style="font-size: 16px;">call_split</span>
+                            Split Principal
+                        </button>
+</div>
+</div>
+<div class="group grid grid-cols-12 gap-4 p-4 items-center border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="col-span-1 text-center">
+<div class="flex flex-col">
+<span class="text-slate-900 font-bold text-sm">22</span>
+<span class="text-slate-400 text-xs font-medium">OCT</span>
+</div>
+</div>
+<div class="col-span-4 flex items-center gap-3">
+<div class="size-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0 text-emerald-600">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<p class="text-slate-900 font-bold text-sm">Nómina TechCorp SL</p>
+<p class="text-slate-500 text-xs">Ingreso Recurrente</p>
+</div>
+</div>
+<div class="col-span-3">
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wide">Salario</span>
+<span class="px-2 py-1 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-wide">Ingreso</span>
+</div>
+</div>
+<div class="col-span-2 text-right">
+<p class="text-emerald-600 font-bold font-mono text-sm">+4.850,00 €</p>
+</div>
+<div class="col-span-2 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200/50">
+<span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+</button>
+<button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200/50">
+<span class="material-symbols-outlined" style="font-size: 20px;">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group grid grid-cols-12 gap-4 p-4 items-center border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="col-span-1 text-center">
+<div class="flex flex-col">
+<span class="text-slate-900 font-bold text-sm">21</span>
+<span class="text-slate-400 text-xs font-medium">OCT</span>
+</div>
+</div>
+<div class="col-span-4 flex items-center gap-3">
+<div class="size-10 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 text-amber-600">
+<span class="material-symbols-outlined">account_balance</span>
+</div>
+<div>
+<p class="text-slate-900 font-bold text-sm">Transferencia a Bóveda Fiscal</p>
+<p class="text-slate-500 text-xs">Movimiento Interno</p>
+</div>
+</div>
+<div class="col-span-3">
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 uppercase tracking-wide">Provisión Impuestos</span>
+<span class="px-2 py-1 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wide">Interno</span>
+</div>
+</div>
+<div class="col-span-2 text-right">
+<p class="text-slate-900 font-bold font-mono text-sm">1.020,00 €</p>
+</div>
+<div class="col-span-2 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200/50">
+<span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+</button>
+<button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200/50">
+<span class="material-symbols-outlined" style="font-size: 20px;">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group grid grid-cols-12 gap-4 p-4 items-center hover:bg-slate-50 transition-colors">
+<div class="col-span-1 text-center">
+<div class="flex flex-col">
+<span class="text-slate-900 font-bold text-sm">20</span>
+<span class="text-slate-400 text-xs font-medium">OCT</span>
+</div>
+</div>
+<div class="col-span-4 flex items-center gap-3">
+<div class="size-10 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0 text-rose-500">
+<span class="material-symbols-outlined">shopping_cart</span>
+</div>
+<div>
+<p class="text-slate-900 font-bold text-sm">Amazon ES H8812</p>
+<p class="text-slate-500 text-xs">Compra Online</p>
+</div>
+</div>
+<div class="col-span-3">
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wide">Gastos</span>
+</div>
+</div>
+<div class="col-span-2 text-right">
+<p class="text-rose-500 font-bold font-mono text-sm">-89,90 €</p>
+</div>
+<div class="col-span-2 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200/50">
+<span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+</button>
+<button class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-200/50">
+<span class="material-symbols-outlined" style="font-size: 20px;">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex justify-center mt-4">
+<button class="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1 bg-white border border-slate-200 px-4 py-2 rounded-full shadow-sm hover:shadow-md">
+                    Cargar más transacciones
+                    <span class="material-symbols-outlined" style="font-size: 16px;">expand_more</span>
+</button>
+</div>
+</section>
+</main>
+
+</body></html>
