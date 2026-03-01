@@ -18,7 +18,7 @@
         "target": "Meta",
         "in": "Entradas",
         "out": "Salidas",
-        "active_assets": "Activos Activos",
+        "active_assets": "Activos Operativos",
         "operations_hub": "Hub de Operaciones",
         "projects_vault": "Proyectos y Documentos",
         "current_value": "Valor Actual",

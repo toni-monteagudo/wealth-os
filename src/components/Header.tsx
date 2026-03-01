@@ -3,13 +3,16 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Bell, Wallet, Settings } from "lucide-react";
+import { Search, Wallet, LogOut, Settings, User } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 import { useI18n } from "@/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 export function Header() {
     const pathname = usePathname();
+    const { data: session } = useSession();
     const { t, locale, setLocale } = useI18n();
+    const [dropdownOpen, setDropdownOpen] = React.useState(false);
 
     const navLinks = [
         { href: "/", label: t("nav.dashboard") },
@@ -35,28 +38,30 @@ export function Header() {
                         </div>
                     </Link>
 
-                    <nav className="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200">
-                        {navLinks.map((link) => {
-                            const isActive = link.href === "/"
-                                ? pathname === "/"
-                                : pathname.startsWith(link.href);
+                    {session && (
+                        <nav className="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200">
+                            {navLinks.map((link) => {
+                                const isActive = link.href === "/"
+                                    ? pathname === "/"
+                                    : pathname.startsWith(link.href);
 
-                            return (
-                                <Link
-                                    key={link.href}
-                                    href={link.href}
-                                    className={cn(
-                                        "px-4 py-2 rounded-full text-sm font-semibold transition-all",
-                                        isActive
-                                            ? "bg-white shadow-sm text-slate-900"
-                                            : "text-slate-500 hover:text-slate-900 hover:bg-white/50 font-medium"
-                                    )}
-                                >
-                                    {link.label}
-                                </Link>
-                            );
-                        })}
-                    </nav>
+                                return (
+                                    <Link
+                                        key={link.href}
+                                        href={link.href}
+                                        className={cn(
+                                            "px-4 py-2 rounded-full text-sm font-semibold transition-all",
+                                            isActive
+                                                ? "bg-white shadow-sm text-slate-900"
+                                                : "text-slate-500 hover:text-slate-900 hover:bg-white/50 font-medium"
+                                        )}
+                                    >
+                                        {link.label}
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -79,22 +84,47 @@ export function Header() {
                         <option value="en">EN</option>
                     </select>
 
-                    <button className="size-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors relative">
-                        <Bell size={20} />
-                        <span className="absolute top-2 right-2.5 size-2 bg-rose-500 rounded-full border-2 border-white"></span>
-                    </button>
+                    {session && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setDropdownOpen(!dropdownOpen)}
+                                className="h-10 w-10 rounded-full border border-slate-200 overflow-hidden ring-2 ring-white hover:ring-accent/20 transition-all focus:outline-none"
+                            >
+                                <img
+                                    alt="User"
+                                    className="object-cover w-full h-full"
+                                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                                />
+                            </button>
 
-                    <Link href="/configuracion" className="size-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors">
-                        <Settings size={20} />
-                    </Link>
-
-                    <div className="h-10 w-10 rounded-full border border-slate-200 overflow-hidden ring-2 ring-white">
-                        <img
-                            alt="User"
-                            className="object-cover w-full h-full"
-                            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                        />
-                    </div>
+                            {dropdownOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)}></div>
+                                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+                                            <p className="text-sm font-bold text-slate-900">{session.user?.name}</p>
+                                            <p className="text-xs font-medium text-slate-500 truncate">{session.user?.email}</p>
+                                        </div>
+                                        <div className="p-1.5 flex flex-col gap-0.5">
+                                            <Link
+                                                href="/configuracion"
+                                                onClick={() => setDropdownOpen(false)}
+                                                className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2"
+                                            >
+                                                <Settings size={16} /> Configuración Global
+                                            </Link>
+                                            <button
+                                                onClick={() => signOut({ callbackUrl: '/login' })}
+                                                className="w-full text-left px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center gap-2"
+                                            >
+                                                <LogOut size={16} /> Cerrar Sesión
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </header>

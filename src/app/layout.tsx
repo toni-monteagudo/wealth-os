@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/i18n/I18nContext";
 import { Header } from "@/components/Header";
+import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -19,10 +20,12 @@ export default function RootLayout({
     return (
         <html lang="es" className={inter.variable}>
             <body className="antialiased selection:bg-accent selection:text-white pb-20">
-                <I18nProvider>
-                    <Header />
-                    {children}
-                </I18nProvider>
+                <SessionProviderWrapper>
+                    <I18nProvider>
+                        <Header />
+                        {children}
+                    </I18nProvider>
+                </SessionProviderWrapper>
             </body>
         </html>
     );
