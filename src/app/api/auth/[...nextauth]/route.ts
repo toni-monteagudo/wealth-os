@@ -1,5 +1,8 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import dbConnect from "@/lib/mongodb";
+import User from "@/models/User";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -10,16 +13,32 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Contraseña", type: "password" }
             },
             async authorize(credentials) {
-                // Hardcoded admin user for demonstration purposes 
-                // In production, this would query the DB and use bcrypt to compare passwords
-                if (credentials?.username === "admin" && credentials?.password === "admin") {
-                    return {
-                        id: "1",
-                        name: "Admin Wealth OS",
-                        email: "admin@wealthos.local",
-                    };
+                if (!credentials?.username || !credentials?.password) return null;
+
+                await dbConnect();
+
+                const user = await User.findOne({ email: credentials.username });
+
+                if (!user) {
+                    throw new Error("Usuario no encontrado");
                 }
-                return null;
+
+                const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+                if (!isPasswordValid) {
+                    throw new Error("Contraseña incorrecta");
+                }
+
+                if (!user.isVerified) {
+                    throw new Error("Por favor, verifica tu correo electrónico primero.");
+                }
+
+                return {
+                    id: user._id.toString(),
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+                };
             }
         })
     ],
