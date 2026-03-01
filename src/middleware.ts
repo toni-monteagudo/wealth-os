@@ -4,6 +4,7 @@ export default withAuth({
     pages: {
         signIn: "/login",
     },
+    secret: process.env.NEXTAUTH_SECRET || "super-secret-wealthos-key-for-dev",
 });
 
 export const config = {
