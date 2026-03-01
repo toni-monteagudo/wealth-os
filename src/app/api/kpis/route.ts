@@ -3,17 +3,14 @@ import dbConnect from "@/lib/mongodb";
 import Asset from "@/models/Asset";
 import Liability from "@/models/Liability";
 import Transaction from "@/models/Transaction";
-import { seedDatabase } from "@/lib/seed";
 
 export async function GET() {
     await dbConnect();
 
-    // Auto-seed on first fetch if empty
-    await seedDatabase();
-
     try {
         const assets = await Asset.find({});
         const liabilities = await Liability.find({});
+        const transactions = await Transaction.find({});
 
         const totalAssets = assets.reduce((acc, curr) => acc + curr.value, 0);
         const totalDebt = liabilities.reduce((acc, curr) => acc + curr.balance, 0);
@@ -26,10 +23,9 @@ export async function GET() {
         const saasAssets = assets.filter(a => a.type === "business");
         const mrrTotal = saasAssets.reduce((acc, curr) => acc + (curr.mrr || 0), 0);
 
-        // Monthly FCF Simulation: IN vs OUT based on reference designs. In reality this should aggregate transactions
-        // but building the KPI based on the spec
-        const fcfIn = 32000;
-        const fcfOut = 19500;
+        // Actual FCF Calculation
+        const fcfIn = transactions.filter(tx => tx.amount > 0).reduce((acc, curr) => acc + curr.amount, 0);
+        const fcfOut = transactions.filter(tx => tx.amount < 0).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
         const monthlyFcf = fcfIn - fcfOut;
 
         // FI Goal Target $3.5M
@@ -38,10 +34,10 @@ export async function GET() {
 
         return NextResponse.json({
             netWorth,
-            netWorthGrowth: 12, // mock value matching spec
+            netWorthGrowth: 0,
             ltvRatio: parseFloat(ltvRatio.toFixed(1)),
             monthlyFcf,
-            monthlyFcfGrowth: 5, // mock value matching spec
+            monthlyFcfGrowth: 0,
             fcfIn,
             fcfOut,
             fiGoalProgress: parseFloat(fiGoalProgress.toFixed(1))

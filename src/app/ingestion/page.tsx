@@ -8,36 +8,80 @@ import { ITransaction } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { LoanValidationForm } from "@/components/ingestion/LoanValidationForm";
+import { TransactionValidationList } from "@/components/ingestion/TransactionValidationList";
 
 export default function IngestionPage() {
     const { data: txs, loading, mutate } = useApi<ITransaction[]>("/api/transactions");
     const { t } = useI18n();
     const [isUploading, setIsUploading] = useState(false);
 
+    // AI Validation States
+    const [loanDataToValidate, setLoanDataToValidate] = useState<any>(null);
+    const [txDataToValidate, setTxDataToValidate] = useState<any>(null);
+
     const needsReviewCount = txs?.filter(t => t.status === "needs_review").length || 0;
     const confirmedCount = txs?.filter(t => t.status === "confirmed").length || 0;
     const total = txs?.length || 0;
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "statement" | "loan") => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setIsUploading(true);
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("type", type);
 
         try {
-            const res = await fetch("/api/transactions/ingest", {
+            const res = await fetch("/api/ingestion/analyze", {
                 method: "POST",
                 body: formData,
             });
             if (res.ok) {
-                mutate();
+                const data = await res.json();
+                if (type === "loan") setLoanDataToValidate(data);
+                if (type === "statement") setTxDataToValidate(data);
+            } else {
+                alert("Hubo un error al procesar el documento con IA.");
             }
         } catch (error) {
             console.error(error);
+            alert("Error de conexión con el motor de IA.");
         } finally {
             setIsUploading(false);
+            e.target.value = ''; // reset input
+        }
+    };
+
+    const handleLoanValidate = async (data: any) => {
+        // Send validated loan to API
+        try {
+            await fetch("/api/liabilities", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            setLoanDataToValidate(null);
+            alert("Préstamo importado con éxito.");
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleTxValidate = async (data: any[]) => {
+        // Send batch of validated transactions to API
+        try {
+            await fetch("/api/transactions/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            setTxDataToValidate(null);
+            mutate(); // Refresh the list
+            alert("Movimientos importados con éxito.");
+        } catch (e) {
+            console.error(e);
         }
     };
 
@@ -62,11 +106,40 @@ export default function IngestionPage() {
                     <p className="text-sm font-medium text-slate-500 mt-2">Sube extractos bancarios. La IA categorizará y detectará reglas de separación.</p>
                 </div>
 
-                <label className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors flex items-center gap-2">
-                    <FileSpreadsheet size={18} /> Subir CSV/XLS
-                    <input type="file" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileUpload} />
-                </label>
+                <div className="flex gap-3">
+                    <label className="cursor-pointer bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center gap-2">
+                        <FileSpreadsheet size={18} /> Subir Préstamo (PDF/Img)
+                        <input type="file" className="hidden" accept=".pdf, image/*" onChange={(e) => handleFileUpload(e, "loan")} />
+                    </label>
+                    <label className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors flex items-center gap-2">
+                        <FileSpreadsheet size={18} /> Subir Extractos (CSV/XLS)
+                        <input type="file" className="hidden" accept=".csv, .xls, .xlsx" onChange={(e) => handleFileUpload(e, "statement")} />
+                    </label>
+                </div>
             </div>
+
+            {/* AI Validation Modals / Overlays */}
+            {loanDataToValidate && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                    <LoanValidationForm
+                        initialData={loanDataToValidate}
+                        onValidate={handleLoanValidate}
+                        onCancel={() => setLoanDataToValidate(null)}
+                    />
+                </div>
+            )}
+
+            {txDataToValidate && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="max-w-6xl w-full my-8">
+                        <TransactionValidationList
+                            initialData={txDataToValidate}
+                            onValidate={handleTxValidate}
+                            onCancel={() => setTxDataToValidate(null)}
+                        />
+                    </div>
+                </div>
+            )}
 
             {isUploading && (
                 <PremiumCard className="bg-emerald-50 border-emerald-100 flex items-center gap-4">

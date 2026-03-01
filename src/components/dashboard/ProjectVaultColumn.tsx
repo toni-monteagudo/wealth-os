@@ -9,6 +9,7 @@ import { IProject, IDocument } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function ProjectVaultColumn() {
     const { data: projects, loading: loadingProj } = useApi<IProject[]>("/api/projects");
@@ -33,9 +34,9 @@ export default function ProjectVaultColumn() {
 
                 {loadingProj ? (
                     <div className="animate-pulse flex-1 h-32 bg-slate-100 rounded-xl"></div>
-                ) : (
+                ) : projects && projects.length > 0 ? (
                     <div className="space-y-4">
-                        {projects?.map((proj: IProject) => (
+                        {projects.map((proj: IProject) => (
                             <PremiumCard key={proj._id} className="p-5 flex flex-col gap-4">
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -66,6 +67,14 @@ export default function ProjectVaultColumn() {
                             </PremiumCard>
                         ))}
                     </div>
+                ) : (
+                    <EmptyState
+                        icon={Hammer}
+                        title="Sin proyectos"
+                        description="Monitoriza el presupuesto de tus reformas aquí."
+                        actionLabel="Crear"
+                        actionHref="/projects"
+                    />
                 )}
             </div>
 
@@ -75,14 +84,14 @@ export default function ProjectVaultColumn() {
                     <div className="flex items-center gap-2">
                         <Folder size={18} className="text-slate-900" /> {t("dashboard.document_vault")}
                     </div>
-                    <Link href="/documentos" className="text-accent font-bold uppercase text-[10px] tracking-wider">{t("dashboard.upload")}</Link>
+                    <Link href="/documents" className="text-accent font-bold uppercase text-[10px] tracking-wider">{t("dashboard.upload")}</Link>
                 </h2>
 
                 {loadingDocs ? (
                     <div className="animate-pulse flex-1 h-48 bg-slate-100 rounded-xl"></div>
-                ) : (
+                ) : documents && documents.length > 0 ? (
                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                        {documents?.slice(0, 4).map((doc: IDocument, idx: number) => (
+                        {documents.slice(0, 4).map((doc: IDocument, idx: number) => (
                             <div key={doc._id} className={`p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors ${idx !== 0 ? 'border-t border-slate-100' : ''}`}>
                                 <div className={`size-10 rounded-lg flex items-center justify-center shrink-0 ${doc.type === 'property' ? 'bg-indigo-50 text-indigo-600' :
                                     doc.type === 'legal' ? 'bg-emerald-50 text-emerald-600' :
@@ -104,10 +113,18 @@ export default function ProjectVaultColumn() {
                                 </div>
                             </div>
                         ))}
-                        <Link href="/documentos" className="block w-full text-center bg-slate-50 text-slate-600 font-bold text-xs py-3 border-t border-slate-200 hover:text-slate-900 transition-colors">
+                        <Link href="/documents" className="block w-full text-center bg-slate-50 text-slate-600 font-bold text-xs py-3 border-t border-slate-200 hover:text-slate-900 transition-colors">
                             Ver Todos los Documentos
                         </Link>
                     </div>
+                ) : (
+                    <EmptyState
+                        icon={Folder}
+                        title="Bóveda vacía"
+                        description="Sube escrituras y contratos."
+                        actionLabel="Subir PDF"
+                        actionHref="/documents"
+                    />
                 )}
             </div>
 

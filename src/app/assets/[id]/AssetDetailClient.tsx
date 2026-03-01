@@ -169,7 +169,7 @@ export default function AssetDetailClient() {
                                 <span className="font-medium text-slate-700 text-sm">{mortgage.bank}</span>
                             </div>
 
-                            <Link href="/prestamos" className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors block text-center">
+                            <Link href="/loans" className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors block text-center">
                                 {t("asset_detail.amortization_schedule")}
                             </Link>
                         </PremiumCard>

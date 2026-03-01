@@ -8,6 +8,8 @@ import { useApi } from "@/hooks/useApi";
 import { IAsset, ILiability } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Plus } from "lucide-react";
 
 export default function AssetsListPage() {
     const { data: assets, loading: loadingAssets } = useApi<IAsset[]>("/api/assets");
@@ -50,14 +52,14 @@ export default function AssetsListPage() {
                 </div>
             )}
 
-            {/* Assets Grid */}
+            {/* Assets Grid / Empty State */}
             {loadingAssets ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {[1, 2, 3].map(i => <div key={i} className="animate-pulse h-64 bg-slate-100 rounded-2xl" />)}
                 </div>
-            ) : (
+            ) : assets && assets.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {assets?.map((asset: IAsset) => {
+                    {assets.map((asset: IAsset) => {
                         const linkedMortgage = liabilities?.find((l: ILiability) => {
                             const lId = typeof l.linkedAssetId === "object" ? (l.linkedAssetId as any)._id : l.linkedAssetId;
                             return lId === asset._id;
@@ -65,7 +67,7 @@ export default function AssetsListPage() {
 
                         if (asset.type === "real_estate") {
                             return (
-                                <Link key={asset._id} href={`/activos/${asset._id}`}>
+                                <Link key={asset._id} href={`/assets/${asset._id}`}>
                                     <PremiumCard className="!p-0 overflow-hidden flex flex-col hover:border-accent hover:shadow-lg transition-all group h-full">
                                         <div
                                             className="h-40 w-full bg-cover bg-center relative"
@@ -101,7 +103,7 @@ export default function AssetsListPage() {
                             );
                         } else {
                             return (
-                                <Link key={asset._id} href={`/activos/${asset._id}`}>
+                                <Link key={asset._id} href={`/assets/${asset._id}`}>
                                     <PremiumCard className="!p-0 overflow-hidden flex flex-col hover:border-accent hover:shadow-lg transition-all group h-full">
                                         <div className="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
                                             <div>
@@ -140,6 +142,14 @@ export default function AssetsListPage() {
                         }
                     })}
                 </div>
+            ) : (
+                <EmptyState
+                    icon={Building2}
+                    title="No tienes activos registrados"
+                    description="Registra tu primera propiedad inmobiliaria o negocio para comenzar a trazar tu patrimonio."
+                    actionLabel="Añadir Activo"
+                    actionHref="#"
+                />
             )}
         </main>
     );

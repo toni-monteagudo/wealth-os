@@ -16,12 +16,12 @@ export function Header() {
 
     const navLinks = [
         { href: "/", label: t("nav.dashboard") },
-        { href: "/activos", label: t("nav.assets") },
-        { href: "/proyectos", label: t("nav.projects") },
-        { href: "/documentos", label: t("nav.documents") },
-        { href: "/prestamos", label: t("nav.loans") },
-        { href: "/posicion-global", label: t("nav.global_position") },
-        { href: "/ingesta", label: t("nav.ai_ingestion") },
+        { href: "/assets", label: t("nav.assets") },
+        { href: "/projects", label: t("nav.projects") },
+        { href: "/documents", label: t("nav.documents") },
+        { href: "/loans", label: t("nav.loans") },
+        { href: "/global-position", label: t("nav.global_position") },
+        { href: "/ingestion", label: t("nav.ai_ingestion") },
     ];
 
     return (
@@ -107,7 +107,7 @@ export function Header() {
                                         </div>
                                         <div className="p-1.5 flex flex-col gap-0.5">
                                             <Link
-                                                href="/configuracion"
+                                                href="/settings"
                                                 onClick={() => setDropdownOpen(false)}
                                                 className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2"
                                             >

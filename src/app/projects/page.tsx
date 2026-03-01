@@ -9,6 +9,7 @@ import { IProject } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function ProjectsListPage() {
     const { data: projects, loading } = useApi<IProject[]>("/api/projects");
@@ -55,10 +56,10 @@ export default function ProjectsListPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {[1, 2].map(i => <div key={i} className="animate-pulse h-48 bg-slate-100 rounded-2xl" />)}
                 </div>
-            ) : (
+            ) : projects && projects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {projects?.map((proj: IProject) => (
-                        <Link key={proj._id} href={`/proyectos/${proj._id}`}>
+                    {projects.map((proj: IProject) => (
+                        <Link key={proj._id} href={`/projects/${proj._id}`}>
                             <PremiumCard className="p-6 flex flex-col gap-4 hover:border-accent hover:shadow-lg transition-all group h-full">
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -94,6 +95,14 @@ export default function ProjectsListPage() {
                         </Link>
                     ))}
                 </div>
+            ) : (
+                <EmptyState
+                    icon={Hammer}
+                    title="No hay proyectos en macha"
+                    description="¿Tienes alguna reforma o nuevo negocio en mente? Crea tu primer proyecto para gestionar su presupuesto."
+                    actionLabel="Nuevo Proyecto"
+                    actionHref="#"
+                />
             )}
         </main>
     );

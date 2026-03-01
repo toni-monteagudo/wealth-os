@@ -8,6 +8,7 @@ import { useApi } from "@/hooks/useApi";
 import { IAsset, ILiability } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function ActiveAssetsList() {
     const { data: assets, loading: loadingAssets } = useApi<IAsset[]>("/api/assets");
@@ -25,7 +26,15 @@ export default function ActiveAssetsList() {
                 <button className="text-accent">+</button>
             </h2>
 
-            {assets?.map((asset: IAsset) => {
+            {(!assets || assets.length === 0) ? (
+                <EmptyState
+                    icon={Building2}
+                    title="No hay activos"
+                    description="Actualmente no tienes activos registrados en el sistema."
+                    actionLabel="Crear uno"
+                    actionHref="/assets"
+                />
+            ) : assets.map((asset: IAsset) => {
                 // Find linked liability
                 const linkedMortgage = liabilities?.find((l: ILiability) => {
                     const lId = typeof l.linkedAssetId === "object" ? (l.linkedAssetId as any)._id : l.linkedAssetId;
@@ -34,7 +43,7 @@ export default function ActiveAssetsList() {
 
                 if (asset.type === "real_estate") {
                     return (
-                        <Link key={asset._id} href={`/activos/${asset._id}`}>
+                        <Link key={asset._id} href={`/assets/${asset._id}`}>
                             <PremiumCard className="!p-0 overflow-hidden flex flex-col hover:border-accent">
                                 <div
                                     className="h-36 w-full bg-cover bg-center relative"
@@ -77,7 +86,7 @@ export default function ActiveAssetsList() {
                     );
                 } else {
                     return (
-                        <Link key={asset._id} href={`/activos/${asset._id}`}>
+                        <Link key={asset._id} href={`/assets/${asset._id}`}>
                             <PremiumCard className="!p-0 overflow-hidden flex flex-col hover:border-accent">
                                 <div className="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
                                     <div>

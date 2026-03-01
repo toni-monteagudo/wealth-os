@@ -1,0 +1,121 @@
+import { NextResponse } from "next/server";
+import { generateObject } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { z } from "zod";
+import dbConnect from "@/lib/mongodb";
+import Settings from "@/models/Settings";
+
+// Zod schemas for structured extraction
+const bankStatementSchema = z.object({
+    transactions: z.array(z.object({
+        date: z.string().describe("Fecha de la transacción en formato YYYY-MM-DD"),
+        description: z.string().describe("Concepto o descripción limpia del movimiento"),
+        amount: z.number().describe("Importe de la transacción. Negativo para gastos, positivo para ingresos."),
+        category: z.string().describe("Categoría inferida (ej: Supermercado, Transporte, Nómina, Restaurantes)")
+    }))
+});
+
+const loanDocumentSchema = z.object({
+    bank: z.string().describe("Nombre de la entidad bancaria o prestamista"),
+    type: z.enum(["mortgage", "personal"]).describe("Si es una hipoteca (mortgage) o préstamo personal (personal)"),
+    balance: z.number().describe("Capital total concedido o pendiente"),
+    interestRate: z.number().describe("Tipo de interés porcentual (TIN/TAE)"),
+    monthlyPayment: z.number().describe("Cuota mensual a pagar (incluyendo capital e intereses)"),
+    loanNumber: z.string().optional().describe("Número de cuenta del préstamo o referencia (opcional)")
+});
+
+// Helper to initialize the correct AI provider based on settings
+async function getAiModel() {
+    await dbConnect();
+    const settings = await Settings.findOne({ userId: 'default' }); // Assuming default user for now since no multi-tenant
+
+    if (!settings || !settings.aiProvider || !settings.aiApiKey) {
+        throw new Error("AI Provider or API Key not configured. Please visit Settings.");
+    }
+
+    switch (settings.aiProvider) {
+        case 'openai':
+            const openai = createOpenAI({ apiKey: settings.aiApiKey });
+            return openai(settings.aiModel || 'gpt-4o-mini');
+        case 'google':
+            const google = createGoogleGenerativeAI({ apiKey: settings.aiApiKey });
+            return google(settings.aiModel || 'gemini-1.5-pro');
+        case 'anthropic':
+            const anthropic = createAnthropic({ apiKey: settings.aiApiKey });
+            return anthropic(settings.aiModel || 'claude-3-haiku-20240307');
+        default:
+            throw new Error(`Unsupported AI Provider: ${settings.aiProvider}`);
+    }
+}
+
+export async function POST(req: Request) {
+    try {
+        const formData = await req.formData();
+        const file = formData.get("file") as File;
+        const type = formData.get("type") as "statement" | "loan"; // Expected values from the frontend
+
+        if (!file) {
+            return NextResponse.json({ error: "No file provided" }, { status: 400 });
+        }
+
+        if (type !== 'statement' && type !== 'loan') {
+            return NextResponse.json({ error: "Invalid document type. Expected 'statement' or 'loan'." }, { status: 400 });
+        }
+
+        const model = await getAiModel();
+
+        // Convert file to base64 for vision models
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const base64Content = buffer.toString('base64');
+        const mimeType = file.type;
+
+        let messages: any[];
+
+        if (mimeType === 'text/csv' || mimeType.includes('text/')) {
+            const textContent = buffer.toString('utf8');
+            messages = [
+                {
+                    role: 'user',
+                    content: [
+                        { type: "text", text: `Please extract data from the following document:\n\n${textContent}` }
+                    ]
+                }
+            ];
+        } else {
+            messages = [
+                {
+                    role: 'user',
+                    content: [
+                        { type: "text", text: "Please extract structured data from this document based on the required schema." },
+                        {
+                            type: "file",
+                            data: `data:${mimeType};base64,${base64Content}`,
+                            mimeType: mimeType
+                        }
+                    ]
+                }
+            ];
+        }
+
+        const schema = type === 'statement' ? bankStatementSchema : loanDocumentSchema;
+        const systemPrompt = type === 'statement'
+            ? "You are an expert financial assistant. Analyze this bank statement and extract a structured list of transactions. Ensure amounts use the correct negative/positive sign."
+            : "You are an expert loan officer. Analyze this mortgage or loan agreement and extract the core financial figures. Read carefully to distinguish the total capital from the monthly installment and interest rate.";
+
+        // @ts-ignore - The `ai` SDK handles image parts differently depending on version. We'll pass the content safely.
+        const { object } = await generateObject({
+            model: model,
+            schema: schema,
+            system: systemPrompt,
+            messages: messages,
+        });
+
+        return NextResponse.json(object);
+
+    } catch (error: any) {
+        console.error("AI Ingestion Error:", error);
+        return NextResponse.json({ error: error.message || "Failed to analyze document" }, { status: 500 });
+    }
+}

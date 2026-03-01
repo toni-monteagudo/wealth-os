@@ -10,6 +10,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function OperationsHub() {
     const { data: transactions, loading: loadingTx, mutate: mutateTx } = useApi<ITransaction[]>("/api/transactions?limit=3");
@@ -32,7 +33,7 @@ export default function OperationsHub() {
             });
             if (res.ok) {
                 mutateTx();
-                router.push("/ingesta");
+                router.push("/ingestion");
             }
         } catch (error) {
             console.error(error);
@@ -98,7 +99,7 @@ export default function OperationsHub() {
                                 </div>
                             </div>
                         ))}
-                        <Link href="/ingesta" className="block text-center text-xs font-bold text-accent hover:text-teal-700 p-2">
+                        <Link href="/ingestion" className="block text-center text-xs font-bold text-accent hover:text-teal-700 p-2">
                             Ver Hub Completo →
                         </Link>
                     </div>
@@ -111,14 +112,14 @@ export default function OperationsHub() {
                     <div className="flex items-center gap-2">
                         <Lock size={18} className="text-slate-900" /> {t("dashboard.ghost_money_reserves")}
                     </div>
-                    <Link href="/boveda" className="text-accent">+</Link>
+                    <Link href="/vault" className="text-accent">+</Link>
                 </h2>
 
                 {loadingReserves ? (
                     <div className="animate-pulse bg-slate-100 h-48 rounded-xl"></div>
-                ) : (
+                ) : reserves && reserves.length > 0 ? (
                     <PremiumCard className="flex flex-col gap-5">
-                        {reserves?.slice(0, 3).map((res: IReserve) => {
+                        {reserves.slice(0, 3).map((res: IReserve) => {
                             const progress = (res.balance / res.target) * 100;
                             return (
                                 <div key={res._id}>
@@ -147,6 +148,14 @@ export default function OperationsHub() {
                             );
                         })}
                     </PremiumCard>
+                ) : (
+                    <EmptyState
+                        icon={Lock}
+                        title="Sin Reservas"
+                        description="Aún no tienes sobres guardados."
+                        actionLabel="Crear Reserva"
+                        actionHref="/documents"
+                    />
                 )}
             </div>
 

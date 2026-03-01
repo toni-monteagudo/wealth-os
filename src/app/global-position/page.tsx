@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Globe, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Globe, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
 import { ITransaction, IAsset, IProject } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function GlobalPositionPage() {
     const { data: transactions, loading: loadingTx } = useApi<ITransaction[]>("/api/transactions?limit=200");
@@ -105,46 +106,56 @@ export default function GlobalPositionPage() {
                         <span className="text-xs font-bold text-slate-500">{filtered.length} registros</span>
                     </div>
 
-                    <div className="overflow-x-auto max-h-[600px]">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-white text-[10px] uppercase font-bold text-slate-400 tracking-wider sticky top-0 z-10">
-                                <tr>
-                                    <th className="px-5 py-3 border-b border-slate-100">{t("global_position.date")}</th>
-                                    <th className="px-5 py-3 border-b border-slate-100">{t("global_position.description")}</th>
-                                    <th className="px-5 py-3 border-b border-slate-100">{t("global_position.category")}</th>
-                                    <th className="px-5 py-3 border-b border-slate-100 text-right">{t("global_position.amount")}</th>
-                                    <th className="px-5 py-3 border-b border-slate-100">{t("global_position.linked_to")}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                                {filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="p-8 text-center text-slate-400 font-medium">{t("global_position.no_transactions")}</td></tr>
-                                ) : filtered.map((tx: ITransaction) => {
-                                    const assetName = assets?.find(a => a._id === tx.linkedAssetId)?.name;
-                                    const projectName = projects?.find(p => p._id === tx.linkedProjectId)?.name;
-                                    return (
-                                        <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-5 py-4 text-slate-500 font-medium">{tx.date}</td>
-                                            <td className="px-5 py-4 font-bold text-slate-900">{tx.description}</td>
-                                            <td className="px-5 py-4">
-                                                <Badge variant="neutral">{tx.category}</Badge>
-                                            </td>
-                                            <td className={`px-5 py-4 text-right font-mono font-bold ${tx.amount < 0 ? "text-slate-900" : "text-emerald-600"}`}>
-                                                {formatCurrency(tx.amount)}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex flex-col gap-0.5">
-                                                    {assetName && <span className="text-xs text-indigo-600 font-medium">🏠 {assetName}</span>}
-                                                    {projectName && <span className="text-xs text-accent font-medium">🔨 {projectName}</span>}
-                                                    {!assetName && !projectName && <span className="text-xs text-slate-400">—</span>}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                    {filtered.length > 0 ? (
+                        <div className="overflow-x-auto max-h-[600px]">
+                            <table className="w-full text-left text-sm whitespace-nowrap">
+                                <thead className="bg-white text-[10px] uppercase font-bold text-slate-400 tracking-wider sticky top-0 z-10">
+                                    <tr>
+                                        <th className="px-5 py-3 border-b border-slate-100">{t("global_position.date")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100">{t("global_position.description")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100">{t("global_position.category")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100 text-right">{t("global_position.amount")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100">{t("global_position.linked_to")}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white">
+                                    {filtered.map((tx: ITransaction) => {
+                                        const assetName = assets?.find(a => a._id === tx.linkedAssetId)?.name;
+                                        const projectName = projects?.find(p => p._id === tx.linkedProjectId)?.name;
+                                        return (
+                                            <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-5 py-4 text-slate-500 font-medium">{tx.date}</td>
+                                                <td className="px-5 py-4 font-bold text-slate-900">{tx.description}</td>
+                                                <td className="px-5 py-4">
+                                                    <Badge variant="neutral">{tx.category}</Badge>
+                                                </td>
+                                                <td className={`px-5 py-4 text-right font-mono font-bold ${tx.amount < 0 ? "text-slate-900" : "text-emerald-600"}`}>
+                                                    {formatCurrency(tx.amount)}
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        {assetName && <span className="text-xs text-indigo-600 font-medium">🏠 {assetName}</span>}
+                                                        {projectName && <span className="text-xs text-accent font-medium">🔨 {projectName}</span>}
+                                                        {!assetName && !projectName && <span className="text-xs text-slate-400">—</span>}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="p-8">
+                            <EmptyState
+                                icon={Activity}
+                                title="Aún no hay movimientos bancarios"
+                                description="Sube aquí tu primer extracto bancario en CSV u hoja de cálculo y la IA lo autoclasificará por ti."
+                                actionLabel="Subir Extracto (IA)"
+                                actionHref="/ingestion"
+                            />
+                        </div>
+                    )}
                 </PremiumCard>
             )}
         </main>

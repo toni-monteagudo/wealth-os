@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import { ShieldAlert, AlertCircle, FileText, CheckCircle2 } from "lucide-react";
+import { ShieldAlert, AlertCircle, FileText, CheckCircle2, FileSearch, Wallet } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
 import { IDocument, IReserve } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function DocumentsPage() {
     const { data: docs, loading: loadingDocs } = useApi<IDocument[]>("/api/documents");
@@ -43,9 +44,9 @@ export default function DocumentsPage() {
                     <PremiumCard className="!p-0">
                         {loadingDocs ? (
                             <div className="p-8 text-center text-slate-400 font-medium animate-pulse">Cargando...</div>
-                        ) : (
+                        ) : docs && docs.length > 0 ? (
                             <div className="divide-y divide-slate-100">
-                                {docs?.map((doc: IDocument) => (
+                                {docs.map((doc: IDocument) => (
                                     <div key={doc._id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors group">
                                         <div className="flex items-center gap-4">
                                             <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${doc.type === 'property' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
@@ -89,6 +90,16 @@ export default function DocumentsPage() {
                                     </div>
                                 ))}
                             </div>
+                        ) : (
+                            <div className="p-4">
+                                <EmptyState
+                                    icon={FileSearch}
+                                    title="Sin documentos"
+                                    description="Sube escrituras, contratos o identificaciones para tenerlos a salvo y a mano."
+                                    actionLabel="Subir Documento"
+                                    actionHref="#"
+                                />
+                            </div>
                         )}
                     </PremiumCard>
                 </div>
@@ -126,32 +137,44 @@ export default function DocumentsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         {loadingReserves ? (
                             <div className="animate-pulse flex-1 h-32 bg-slate-100 rounded-xl col-span-2"></div>
-                        ) : reserves?.map((res: IReserve) => (
-                            <PremiumCard key={res._id} className="p-5 flex flex-col justify-between h-40">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-bold text-slate-900 mb-0.5">{res.name}</h3>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                            Target: {formatCurrency(res.target)}
-                                            {res.allocationPercent && <span className="bg-slate-100 px-1 py-0.5 rounded text-slate-600 ml-1">{res.allocationPercent}% Auto</span>}
-                                        </p>
+                        ) : reserves && reserves.length > 0 ? (
+                            reserves.map((res: IReserve) => (
+                                <PremiumCard key={res._id} className="p-5 flex flex-col justify-between h-40">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 mb-0.5">{res.name}</h3>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                                Target: {formatCurrency(res.target)}
+                                                {res.allocationPercent && <span className="bg-slate-100 px-1 py-0.5 rounded text-slate-600 ml-1">{res.allocationPercent}% Auto</span>}
+                                            </p>
+                                        </div>
+                                        {res.balance >= res.target && <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />}
                                     </div>
-                                    {res.balance >= res.target && <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />}
-                                </div>
 
-                                <div>
-                                    <div className="flex justify-between items-end mb-1.5">
-                                        <p className="text-xl font-bold text-slate-900">{formatCurrency(res.balance)}</p>
-                                        {res.dueDate && <p className="text-[10px] font-bold text-rose-500 uppercase">Vence: {res.dueDate}</p>}
+                                    <div>
+                                        <div className="flex justify-between items-end mb-1.5">
+                                            <p className="text-xl font-bold text-slate-900">{formatCurrency(res.balance)}</p>
+                                            {res.dueDate && <p className="text-[10px] font-bold text-rose-500 uppercase">Vence: {res.dueDate}</p>}
+                                        </div>
+                                        <ProgressBar
+                                            progress={(res.balance / res.target) * 100}
+                                            colorClass={res.balance >= res.target ? "bg-emerald-500" : res.type === 'tax' ? "bg-rose-500" : "bg-accent"}
+                                            className="h-2"
+                                        />
                                     </div>
-                                    <ProgressBar
-                                        progress={(res.balance / res.target) * 100}
-                                        colorClass={res.balance >= res.target ? "bg-emerald-500" : res.type === 'tax' ? "bg-rose-500" : "bg-accent"}
-                                        className="h-2"
-                                    />
-                                </div>
-                            </PremiumCard>
-                        ))}
+                                </PremiumCard>
+                            ))
+                        ) : (
+                            <div className="col-span-1 md:col-span-2">
+                                <EmptyState
+                                    icon={Wallet}
+                                    title="Sin reservas fantasma"
+                                    description="Crea tu primer sobre virtual para apartar dinero para impuestos o imprevistos de tus activos."
+                                    actionLabel="Crear Reserva"
+                                    actionHref="#"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
