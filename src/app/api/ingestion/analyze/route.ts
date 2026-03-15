@@ -55,6 +55,10 @@ async function getAiModel() {
             if (modelName.startsWith('models/')) {
                 modelName = modelName.replace('models/', '');
             }
+            // Some API regions/keys reject the bare 'gemini-1.5-flash' name. Alias it to the latest version.
+            if (modelName === 'gemini-1.5-flash') {
+                modelName = 'gemini-1.5-flash-latest';
+            }
             return google(modelName);
         case 'anthropic':
             const anthropic = createAnthropic({ apiKey: providerConfig.apiKey });
