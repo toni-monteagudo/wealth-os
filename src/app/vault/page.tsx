@@ -7,10 +7,14 @@ import { useApi } from "@/hooks/useApi";
 import { IDocument, IReserve } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { AddDocumentForm } from "@/components/forms/AddDocumentForm";
+import { AddReserveForm } from "@/components/forms/AddReserveForm";
 
 export default function VaultPage() {
-    const { data: docs, loading: loadingDocs } = useApi<IDocument[]>("/api/documents");
-    const { data: reserves, loading: loadingReserves } = useApi<IReserve[]>("/api/reserves");
+    const [isAddDocOpen, setIsAddDocOpen] = React.useState(false);
+    const [isAddReserveOpen, setIsAddReserveOpen] = React.useState(false);
+    const { data: docs, loading: loadingDocs, mutate: mutateDocs } = useApi<IDocument[]>("/api/documents");
+    const { data: reserves, loading: loadingReserves, mutate: mutateReserves } = useApi<IReserve[]>("/api/reserves");
     const { t } = useI18n();
 
     const formatCurrency = (num: number) => {
@@ -37,7 +41,12 @@ export default function VaultPage() {
                 <div className="flex flex-col gap-4">
                     <div className="flex justify-between items-end mb-2">
                         <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t("vault.critical_documents")}</h2>
-                        <button className="text-xs font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded transition-colors">+ {t("vault.upload_document")}</button>
+                        <button 
+                            onClick={() => setIsAddDocOpen(true)}
+                            className="text-xs font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded transition-colors"
+                        >
+                            + {t("vault.upload_document")}
+                        </button>
                     </div>
 
                     <PremiumCard className="!p-0">
@@ -97,7 +106,12 @@ export default function VaultPage() {
                 <div className="flex flex-col gap-4">
                     <div className="flex justify-between items-end mb-2">
                         <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t("vault.ghost_reserves")}</h2>
-                        <button className="text-xs font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded transition-colors">+ {t("vault.new_reserve")}</button>
+                        <button 
+                            onClick={() => setIsAddReserveOpen(true)}
+                            className="text-xs font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded transition-colors"
+                        >
+                            + {t("vault.new_reserve")}
+                        </button>
                     </div>
 
                     {/* Master View */}
@@ -156,6 +170,17 @@ export default function VaultPage() {
                 </div>
 
             </div>
+
+            <AddDocumentForm 
+                isOpen={isAddDocOpen} 
+                onClose={() => setIsAddDocOpen(false)} 
+                onSuccess={() => mutateDocs()} 
+            />
+            <AddReserveForm 
+                isOpen={isAddReserveOpen} 
+                onClose={() => setIsAddReserveOpen(false)} 
+                onSuccess={() => mutateReserves()} 
+            />
         </main>
     );
 }

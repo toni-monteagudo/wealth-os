@@ -79,20 +79,29 @@ export function TransactionValidationList({ initialData, onValidate, onCancel }:
                                         className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:ring-0 p-1 font-bold text-slate-900 transition-colors"
                                     />
                                 </td>
-                                <td className={`px-5 py-3 text-right font-mono font-bold ${tx.amount < 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
-                                    {formatCurrency(tx.amount)}
+                                <td className="px-5 py-3 text-right font-mono font-bold">
+                                    <span className={tx.amount < 0 ? 'text-slate-900' : 'text-emerald-600'}>
+                                        {formatCurrency(tx.amount)}
+                                    </span>
                                 </td>
-                                <td className="px-5 py-3">
-                                    <input
-                                        type="text"
-                                        value={tx.category}
-                                        onChange={(e) => handleTxChange(idx, 'category', e.target.value)}
-                                        className="w-full bg-slate-100 border-none rounded-md px-2 py-1.5 text-xs font-bold text-slate-600 focus:ring-2 focus:ring-emerald-500/20"
-                                    />
+                                <td className="px-5 py-3 relative">
+                                    <div className="relative flex items-center">
+                                        <input
+                                            type="text"
+                                            value={tx.category}
+                                            onChange={(e) => handleTxChange(idx, 'category', e.target.value)}
+                                            className={`w-full border-none rounded-md px-2 py-1.5 text-[11px] font-bold text-slate-600 focus:ring-2 focus:ring-emerald-500/20 uppercase bg-slate-100 ${tx.category !== 'UNCATEGORIZED' ? 'pr-6 text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200' : ''}`}
+                                        />
+                                        {tx.category !== 'UNCATEGORIZED' && (
+                                            <div className="absolute right-2 text-emerald-500" title="Auto-kategorizado por histórico">
+                                                ✨
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-5 py-3">
                                     <select
-                                        value={tx.linkedAssetId || tx.linkedProjectId || ''}
+                                        value={tx.linkedAssetId ? `asset_${tx.linkedAssetId}` : tx.linkedProjectId ? `proj_${tx.linkedProjectId}` : ''}
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             if (!val) {

@@ -29,24 +29,32 @@ const loanDocumentSchema = z.object({
 // Helper to initialize the correct AI provider based on settings
 async function getAiModel() {
     await dbConnect();
-    const settings = await Settings.findOne({ userId: 'default' }); // Assuming default user for now since no multi-tenant
+    const settings = await Settings.findOne();
 
-    if (!settings || !settings.aiProvider || !settings.aiApiKey) {
-        throw new Error("AI Provider or API Key not configured. Please visit Settings.");
+    if (!settings || !settings.activeProvider || !settings.providers?.length) {
+        throw new Error("AI Provider not configured. Please visit Settings.");
     }
 
-    switch (settings.aiProvider) {
+    const providerConfig = settings.providers.find(
+        (p: any) => p.name === settings.activeProvider
+    );
+
+    if (!providerConfig || !providerConfig.apiKey) {
+        throw new Error(`API Key for ${settings.activeProvider} not configured. Please visit Settings.`);
+    }
+
+    switch (providerConfig.name) {
         case 'openai':
-            const openai = createOpenAI({ apiKey: settings.aiApiKey });
-            return openai(settings.aiModel || 'gpt-4o-mini');
+            const openai = createOpenAI({ apiKey: providerConfig.apiKey });
+            return openai(providerConfig.model || 'gpt-4o');
         case 'google':
-            const google = createGoogleGenerativeAI({ apiKey: settings.aiApiKey });
-            return google(settings.aiModel || 'gemini-1.5-pro');
+            const google = createGoogleGenerativeAI({ apiKey: providerConfig.apiKey });
+            return google(providerConfig.model || 'gemini-1.5-pro');
         case 'anthropic':
-            const anthropic = createAnthropic({ apiKey: settings.aiApiKey });
-            return anthropic(settings.aiModel || 'claude-3-haiku-20240307');
+            const anthropic = createAnthropic({ apiKey: providerConfig.apiKey });
+            return anthropic(providerConfig.model || 'claude-3-5-sonnet-latest');
         default:
-            throw new Error(`Unsupported AI Provider: ${settings.aiProvider}`);
+            throw new Error(`Unsupported AI Provider: ${providerConfig.name}`);
     }
 }
 

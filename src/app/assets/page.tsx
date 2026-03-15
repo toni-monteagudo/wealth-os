@@ -10,9 +10,11 @@ import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Plus } from "lucide-react";
+import { AddAssetForm } from "@/components/forms/AddAssetForm";
 
 export default function AssetsListPage() {
-    const { data: assets, loading: loadingAssets } = useApi<IAsset[]>("/api/assets");
+    const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+    const { data: assets, loading: loadingAssets, mutate: mutateAssets } = useApi<IAsset[]>("/api/assets");
     const { data: liabilities } = useApi<ILiability[]>("/api/liabilities");
     const { t } = useI18n();
 
@@ -23,11 +25,20 @@ export default function AssetsListPage() {
     return (
         <main className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full flex flex-col gap-8">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <Building2 size={32} className="text-slate-900" /> {t("assets_list.title")}
-                </h1>
-                <p className="text-sm font-medium text-slate-500 mt-2">{t("assets_list.subtitle")}</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                        <Building2 size={32} className="text-slate-900" /> {t("assets_list.title")}
+                    </h1>
+                    <p className="text-sm font-medium text-slate-500 mt-2">{t("assets_list.subtitle")}</p>
+                </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                >
+                    <Plus size={16} />
+                    Añadir Activo
+                </button>
             </div>
 
             {/* KPI Summary */}
@@ -151,6 +162,12 @@ export default function AssetsListPage() {
                     actionHref="#"
                 />
             )}
+
+            <AddAssetForm 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                onSuccess={() => mutateAssets()} 
+            />
         </main>
     );
 }

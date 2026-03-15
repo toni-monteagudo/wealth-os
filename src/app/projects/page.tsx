@@ -10,9 +10,12 @@ import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Plus } from "lucide-react";
+import { AddProjectForm } from "@/components/forms/AddProjectForm";
 
 export default function ProjectsListPage() {
-    const { data: projects, loading } = useApi<IProject[]>("/api/projects");
+    const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+    const { data: projects, loading, mutate } = useApi<IProject[]>("/api/projects");
     const { t } = useI18n();
 
     const formatCurrency = (num: number) => {
@@ -22,11 +25,20 @@ export default function ProjectsListPage() {
     return (
         <main className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full flex flex-col gap-8">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <Hammer size={32} className="text-slate-900" /> {t("projects.all_projects")}
-                </h1>
-                <p className="text-sm font-medium text-slate-500 mt-2">{t("projects.all_projects_subtitle")}</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                        <Hammer size={32} className="text-slate-900" /> {t("projects.all_projects")}
+                    </h1>
+                    <p className="text-sm font-medium text-slate-500 mt-2">{t("projects.all_projects_subtitle")}</p>
+                </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                >
+                    <Plus size={16} />
+                    Nuevo Proyecto
+                </button>
             </div>
 
             {/* KPI Summary */}
@@ -104,6 +116,12 @@ export default function ProjectsListPage() {
                     actionHref="#"
                 />
             )}
+
+            <AddProjectForm 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                onSuccess={() => mutate()} 
+            />
         </main>
     );
 }
