@@ -49,7 +49,13 @@ async function getAiModel() {
             return openai(providerConfig.model || 'gpt-4o');
         case 'google':
             const google = createGoogleGenerativeAI({ apiKey: providerConfig.apiKey });
-            return google(providerConfig.model || 'gemini-1.5-pro');
+            let modelName = providerConfig.model || 'gemini-1.5-pro';
+            // Google SDK automatically prepends "models/" if not present, but sometimes causes issues if double-prefixed or aliased incorrectly. 
+            // We strip "models/" if the user typed it, just to be safe.
+            if (modelName.startsWith('models/')) {
+                modelName = modelName.replace('models/', '');
+            }
+            return google(modelName);
         case 'anthropic':
             const anthropic = createAnthropic({ apiKey: providerConfig.apiKey });
             return anthropic(providerConfig.model || 'claude-3-5-sonnet-latest');
@@ -98,9 +104,8 @@ export async function POST(req: Request) {
                     content: [
                         { type: "text", text: "Please extract structured data from this document based on the required schema." },
                         {
-                            type: "file",
-                            data: `data:${mimeType};base64,${base64Content}`,
-                            mimeType: mimeType
+                            type: "image",
+                            image: `data:${mimeType};base64,${base64Content}`
                         }
                     ]
                 }

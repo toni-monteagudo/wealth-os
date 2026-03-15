@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Settings2, Save, CheckCircle2, Bot } from "lucide-react";
+import { Settings2, Save, CheckCircle2, Bot, Eye, EyeOff } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useI18n } from "@/i18n/I18nContext";
 import { ISettings, ProviderConfig } from "@/types";
@@ -12,6 +12,7 @@ export default function ConfigurationPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -112,13 +113,22 @@ export default function ConfigurationPage() {
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t("configuration.api_key")} ({activeProviderObj.name})</label>
-                                <input
-                                    type="password"
-                                    value={activeProviderObj.apiKey}
-                                    onChange={(e) => updateProviderConfig(activeProviderObj.name, 'apiKey', e.target.value)}
-                                    placeholder={t("configuration.api_key_placeholder")}
-                                    className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showApiKey ? "text" : "password"}
+                                        value={activeProviderObj.apiKey}
+                                        onChange={(e) => updateProviderConfig(activeProviderObj.name, 'apiKey', e.target.value)}
+                                        placeholder={t("configuration.api_key_placeholder")}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 pr-10 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowApiKey(!showApiKey)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                                    >
+                                        {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t("configuration.model")}</label>
