@@ -19,10 +19,19 @@ const bankStatementSchema = z.object({
 
 const loanDocumentSchema = z.object({
     bank: z.string().describe("Nombre de la entidad bancaria o prestamista"),
-    type: z.enum(["mortgage", "personal"]).describe("Si es una hipoteca (mortgage) o préstamo personal (personal)"),
-    balance: z.number().describe("Capital total concedido o pendiente"),
-    interestRate: z.number().describe("Tipo de interés porcentual (TIN/TAE)"),
-    monthlyPayment: z.number().describe("Cuota mensual a pagar (incluyendo capital e intereses)"),
+    type: z.enum(["mortgage", "loan"]).describe("Si es una hipoteca (mortgage) o préstamo personal (loan)"),
+    initialCapital: z.number().optional().describe("Capital original total concedido en la firma del préstamo (no el saldo pendiente actual)"),
+    startDate: z.string().optional().describe("Fecha de firma o inicio del préstamo en formato YYYY-MM-DD"),
+    termMonths: z.number().optional().describe("Plazo total de amortización en meses (PLAZO EN MESES)"),
+    interestType: z.enum(["fixed", "variable"]).optional().describe("Tipo de interés principal: fijo (fixed) o variable (variable)"),
+    tin: z.number().optional().describe("TIN (Tipo de Interés Nominal) actual aplicable al préstamo. Este es el que determina la cuota matemática pura."),
+    tae: z.number().optional().describe("TAE (Tasa Anual Equivalente) actual. Representa el coste real incluyendo comisiones."),
+    interestRate: z.number().describe("Si el documento no especifica claramente TIN o TAE, introduce aquí el porcentaje de interés general."),
+    lateInterestRate: z.number().optional().describe("Interés de demora aplicable en caso de impago (en porcentaje)"),
+    amortizationCommission: z.number().optional().describe("Comisión por amortización temprana o anticipada (en porcentaje)"),
+    cancellationCommission: z.number().optional().describe("Comisión por cancelación total (en porcentaje)"),
+    paymentChargeDay: z.number().optional().describe("Día del mes en el que se suele pasar o cargar el recibo (ej: 1 al 31)"),
+    monthlyPayment: z.number().describe("Cuota mensual actual a pagar (incluyendo ambos componentes: capital e intereses)"),
     loanNumber: z.string().optional().describe("Número de cuenta del préstamo o referencia (opcional)")
 });
 
@@ -119,7 +128,7 @@ export async function POST(req: Request) {
         const schema = type === 'statement' ? bankStatementSchema : loanDocumentSchema;
         const systemPrompt = type === 'statement'
             ? "You are an expert financial assistant. Analyze this bank statement and extract a structured list of transactions. Ensure amounts use the correct negative/positive sign."
-            : "You are an expert loan officer. Analyze this mortgage or loan agreement and extract the core financial figures. Read carefully to distinguish the total capital from the monthly installment and interest rate.";
+            : "You are an expert loan officer. You are scanning a loan or mortgage statement. ALWAYS focus on extracting the ORIGINATION details of the loan (capital originalmente concedido, plazo total en meses, fecha de firma original) rather than the point-in-time current balance. Extrae cuidadosamente todas las penalizaciones y comisiones asociadas descritas en las condiciones.";
 
         // @ts-ignore - The `ai` SDK handles image parts differently depending on version. We'll pass the content safely.
         const { object } = await generateObject({

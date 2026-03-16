@@ -10,6 +10,7 @@ import { useI18n } from "@/i18n/I18nContext";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Plus } from "lucide-react";
 import { AddLiabilityForm } from "@/components/forms/AddLiabilityForm";
+import { calculateRemainingBalance } from "@/lib/utils";
 
 export default function LoansPage() {
     const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -20,10 +21,10 @@ export default function LoansPage() {
         return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(num);
     };
 
-    const totalDebt = liabilities?.reduce((s, l) => s + l.balance, 0) || 0;
+    const totalDebt = liabilities?.reduce((s, l) => s + calculateRemainingBalance(l), 0) || 0;
     const totalMonthly = liabilities?.reduce((s, l) => s + l.monthlyPayment, 0) || 0;
     const avgInterest = liabilities && liabilities.length > 0
-        ? (liabilities.reduce((s, l) => s + l.interestRate, 0) / liabilities.length)
+        ? (liabilities.reduce((s, l) => s + (l.tin !== undefined ? l.tin : l.interestRate), 0) / liabilities.length)
         : 0;
 
     return (
@@ -86,7 +87,7 @@ export default function LoansPage() {
                                         <th className="px-5 py-3 border-b border-slate-100">Nombre</th>
                                         <th className="px-5 py-3 border-b border-slate-100">{t("loans.bank")}</th>
                                         <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.balance")}</th>
-                                        <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.interest_rate")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100 text-right">TIN / TAE</th>
                                         <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.monthly_payment")}</th>
                                         <th className="px-5 py-3 border-b border-slate-100">{t("loans.linked_asset")}</th>
                                     </tr>
@@ -105,14 +106,19 @@ export default function LoansPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <p className="font-bold text-slate-900">{liability.name}</p>
+                                                    <Link href={`/loans/${liability._id}`} className="font-bold text-slate-900 hover:text-accent transition-colors block">
+                                                        {liability.name}
+                                                    </Link>
                                                     {liability.loanNumber && (
                                                         <p className="text-[10px] text-slate-400 font-medium mt-0.5">{t("loans.loan_number")}: {liability.loanNumber}</p>
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-4 text-slate-600 font-medium">{liability.bank}</td>
-                                                <td className="px-5 py-4 text-right font-mono font-bold text-rose-600">{formatCurrency(liability.balance)}</td>
-                                                <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">{liability.interestRate}%</td>
+                                                <td className="px-5 py-4 text-right font-mono font-bold text-rose-600">{formatCurrency(calculateRemainingBalance(liability))}</td>
+                                                <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">
+                                                    {liability.tin !== undefined ? `${liability.tin}%` : `${liability.interestRate}%`}
+                                                    {liability.tae !== undefined && <span className="text-[10px] text-slate-400 font-medium ml-1">({liability.tae}%)</span>}
+                                                </td>
                                                 <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">{formatCurrency(liability.monthlyPayment)}</td>
                                                 <td className="px-5 py-4">
                                                     {linkedAsset ? (
@@ -146,7 +152,7 @@ export default function LoansPage() {
                                 title="No hay préstamos activos"
                                 description="Registra tus hipotecas y préstamos personales para tener una visión clara de tus obligaciones y amortizaciones."
                                 actionLabel="Añadir Préstamo"
-                                actionHref="#"
+                                onAction={() => setIsAddModalOpen(true)}
                             />
                         </div>
                     )}

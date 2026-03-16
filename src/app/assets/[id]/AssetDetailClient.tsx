@@ -1,25 +1,61 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
 import { IAsset, ILiability, ITransaction } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { PremiumCard } from "@/components/ui/PremiumCard";
-import { Building2, Pencil, CalendarDays, Maximize, Landmark, ArrowRightLeft } from "lucide-react";
+import { Building2, Pencil, CalendarDays, Maximize, Landmark, ArrowRightLeft, Trash2, Unlink, Link as LinkIcon } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { calculateRemainingBalance } from "@/lib/utils";
+import { ConfirmDeleteModal } from "@/components/ui/ConfirmDeleteModal";
+import { EditAssetForm } from "@/components/forms/EditAssetForm";
+import { LinkLiabilityModal } from "@/components/forms/LinkLiabilityModal";
 
 export default function AssetDetailClient() {
     const params = useParams();
+    const router = useRouter();
     const id = params.id as string;
-    const { data: asset, loading } = useApi<IAsset>(`/api/assets/${id}`);
+    const { data: asset, loading, mutate } = useApi<IAsset>(`/api/assets/${id}`);
     const { data: liabilities } = useApi<ILiability[]>("/api/liabilities");
     const { data: transactions } = useApi<ITransaction[]>(`/api/transactions?linkedAssetId=${id}`);
     const { t } = useI18n();
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+
     if (loading) return <div className="animate-pulse h-96 bg-slate-100 rounded-2xl w-full"></div>;
     if (!asset) return <div className="text-center p-20 text-slate-500">Asset not found.</div>;
+
+    const handleDelete = async () => {
+        const res = await fetch(`/api/assets/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            router.push("/assets");
+        } else {
+            alert("Error al eliminar el activo. Por favor, inténtalo de nuevo.");
+        }
+    };
+
+    const handleUnlink = async (mortgageId: string) => {
+        try {
+            const res = await fetch(`/api/liabilities/${mortgageId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ linkedAssetId: null }),
+            });
+            if (res.ok) {
+                mutate();
+                // We should also ideally refresh liabilities if they were fetched locally
+                // but window.location.reload() or triggering a top-level mutate works for now
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error("Failed to unlink", error);
+        }
+    };
 
     const formatCurrency = (num: number) => {
         return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(num);
@@ -56,11 +92,48 @@ export default function AssetDetailClient() {
                         </p>
                     </div>
 
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-lg font-bold text-sm shadow-lg hover:bg-slate-50 transition-colors">
-                        <Pencil size={16} /> {t("asset_detail.edit_asset")}
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setIsEditModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-lg font-bold text-sm shadow-lg hover:bg-slate-50 transition-colors"
+                        >
+                            <Pencil size={16} /> {t("asset_detail.edit_asset")}
+                        </button>
+                        <button 
+                            onClick={() => setIsDeleteModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg font-bold text-sm shadow-lg hover:bg-rose-700 transition-colors"
+                        >
+                            <Trash2 size={16} /> Eliminar
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <ConfirmDeleteModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleDelete}
+                itemName={asset.name}
+                itemType="activo"
+            />
+
+            <EditAssetForm 
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSuccess={() => mutate()}
+                asset={asset}
+            />
+
+            <LinkLiabilityModal
+                isOpen={isLinkModalOpen}
+                onClose={() => setIsLinkModalOpen(false)}
+                onSuccess={() => {
+                    mutate();
+                    window.location.reload();
+                }}
+                assetId={asset._id!}
+                availableLiabilities={liabilities || []}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -143,14 +216,20 @@ export default function AssetDetailClient() {
                                 <h3 className="text-slate-900 font-bold text-lg flex items-center gap-2">
                                     <Landmark size={18} className="text-rose-500" /> {t("asset_detail.active_mortgage")}
                                 </h3>
-                                <div className="size-8 rounded-full bg-rose-50 text-rose-500 border border-rose-100 flex items-center justify-center font-bold font-mono text-xs">
-                                    %
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => handleUnlink(mortgage._id!)}
+                                        className="size-8 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-500 flex items-center justify-center transition-colors shadow-sm"
+                                        title="Desvincular préstamo"
+                                    >
+                                        <Unlink size={14} />
+                                    </button>
                                 </div>
                             </div>
 
                             <div className="flex justify-between items-end mb-4">
                                 <div>
-                                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(mortgage.balance)}</p>
+                                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(calculateRemainingBalance(mortgage))}</p>
                                     <p className="text-rose-500 font-medium text-xs">Saldo Pendiente</p>
                                 </div>
                                 <div className="text-right">
@@ -182,6 +261,14 @@ export default function AssetDetailClient() {
                             <p className="text-sm text-slate-400">{t("asset_detail.no_loans")}</p>
                         </PremiumCard>
                     )}
+
+                    {/* Add Existing Mortgage Button */}
+                    <button 
+                        onClick={() => setIsLinkModalOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 text-slate-500 font-bold text-sm rounded-xl hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                        <LinkIcon size={16} /> Vincular Préstamo
+                    </button>
 
                     {/* Tenants */}
                     {asset.type === 'real_estate' && asset.tenants && asset.tenants.length > 0 && (

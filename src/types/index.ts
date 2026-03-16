@@ -27,7 +27,16 @@ export interface IAsset {
     purchaseDate?: string;
     area?: number;
     image?: string;
+    // Real estate specific
+    bedrooms?: number;
+    bathrooms?: number;
+    hasElevator?: boolean;
+    hasParking?: boolean;
+    yearBuilt?: number;
+    cadastralReference?: string;
+    notes?: string;
     rentalYield?: number;
+    // Business specific
     mrr?: number;
     momGrowth?: number;
     employees?: Employee[];
@@ -39,8 +48,17 @@ export interface ILiability {
     _id?: string;
     name: string;
     type: LiabilityType;
-    balance: number;
-    interestRate: number;
+    initialCapital?: number;
+    startDate?: string;
+    termMonths?: number;
+    interestType?: "fixed" | "variable";
+    interestRate: number; // Legacy or fallback
+    tin?: number;
+    tae?: number;
+    lateInterestRate?: number;
+    amortizationCommission?: number;
+    cancellationCommission?: number;
+    paymentChargeDay?: number;
     monthlyPayment: number;
     bank: string;
     loanNumber?: string;

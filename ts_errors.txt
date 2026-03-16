@@ -1,10 +1,3 @@
-.next/types/validator.ts(53,39): error TS2307: Cannot find module '../../src/app/activos/[id]/page.js' or its corresponding type declarations.
-.next/types/validator.ts(62,39): error TS2307: Cannot find module '../../src/app/activos/page.js' or its corresponding type declarations.
-.next/types/validator.ts(71,39): error TS2307: Cannot find module '../../src/app/boveda/page.js' or its corresponding type declarations.
-.next/types/validator.ts(80,39): error TS2307: Cannot find module '../../src/app/configuracion/page.js' or its corresponding type declarations.
-.next/types/validator.ts(89,39): error TS2307: Cannot find module '../../src/app/documentos/page.js' or its corresponding type declarations.
-.next/types/validator.ts(98,39): error TS2307: Cannot find module '../../src/app/ingesta/page.js' or its corresponding type declarations.
-.next/types/validator.ts(125,39): error TS2307: Cannot find module '../../src/app/posicion-global/page.js' or its corresponding type declarations.
-.next/types/validator.ts(134,39): error TS2307: Cannot find module '../../src/app/prestamos/page.js' or its corresponding type declarations.
-.next/types/validator.ts(143,39): error TS2307: Cannot find module '../../src/app/proyectos/[id]/page.js' or its corresponding type declarations.
-.next/types/validator.ts(152,39): error TS2307: Cannot find module '../../src/app/proyectos/page.js' or its corresponding type declarations.
+src/app/assets/[id]/AssetDetailClient.tsx(153,111): error TS2339: Property 'balance' does not exist on type 'ILiability'.
+src/app/assets/page.tsx(104,132): error TS2339: Property 'balance' does not exist on type 'ILiability'.
+src/components/dashboard/ActiveAssetsList.tsx(69,112): error TS2339: Property 'balance' does not exist on type 'ILiability'.

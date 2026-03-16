@@ -11,6 +11,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Plus } from "lucide-react";
 import { AddAssetForm } from "@/components/forms/AddAssetForm";
+import { calculateRemainingBalance } from "@/lib/utils";
 
 export default function AssetsListPage() {
     const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -101,7 +102,7 @@ export default function AssetsListPage() {
                                                 </div>
                                                 <div>
                                                     <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">{t("dashboard.mortgage")}</p>
-                                                    <p className="text-rose-500 font-bold text-xl">{formatCurrency(linkedMortgage?.balance || 0)}</p>
+                                                    <p className="text-rose-500 font-bold text-xl">{formatCurrency(calculateRemainingBalance(linkedMortgage))}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
@@ -159,7 +160,7 @@ export default function AssetsListPage() {
                     title="No tienes activos registrados"
                     description="Registra tu primera propiedad inmobiliaria o negocio para comenzar a trazar tu patrimonio."
                     actionLabel="Añadir Activo"
-                    actionHref="#"
+                    onAction={() => setIsAddModalOpen(true)}
                 />
             )}
 

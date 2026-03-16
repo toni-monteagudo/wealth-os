@@ -11,6 +11,8 @@ interface LoanData {
     type: "mortgage" | "personal";
     balance: number;
     interestRate: number;
+    tin?: number;
+    tae?: number;
     monthlyPayment: number;
     loanNumber?: string;
 }
@@ -32,7 +34,7 @@ export function LoanValidationForm({ initialData, onValidate, onCancel }: Props)
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'balance' || name === 'interestRate' || name === 'monthlyPayment' ? Number(value) : value
+            [name]: name === 'balance' || name === 'interestRate' || name === 'monthlyPayment' || name === 'tin' || name === 'tae' ? Number(value) : value
         }));
     };
 
@@ -40,6 +42,8 @@ export function LoanValidationForm({ initialData, onValidate, onCancel }: Props)
         e.preventDefault();
         onValidate({
             ...formData,
+            // Ensure interestRate is set if tin or tae are provided, or default to 0
+            interestRate: formData.interestRate || formData.tin || formData.tae || 0,
             linkedAssetId: linkedAssetId || undefined
         });
     };
@@ -88,19 +92,6 @@ export function LoanValidationForm({ initialData, onValidate, onCancel }: Props)
                             type="number"
                             name="balance"
                             value={formData.balance}
-                            onChange={handleChange}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                            required
-                            step="0.01"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Interés (%)</label>
-                        <input
-                            type="number"
-                            name="interestRate"
-                            value={formData.interestRate}
                             onChange={handleChange}
                             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                             required
