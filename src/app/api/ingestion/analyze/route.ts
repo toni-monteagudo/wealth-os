@@ -6,6 +6,10 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import dbConnect from "@/lib/mongodb";
 import Settings from "@/models/Settings";
+import Asset from "@/models/Asset";
+import Liability from "@/models/Liability";
+import Transaction from "@/models/Transaction";
+import IngestionBatch from "@/models/IngestionBatch";
 
 // Zod schemas for structured extraction
 const bankStatementSchema = z.object({
@@ -13,7 +17,8 @@ const bankStatementSchema = z.object({
         date: z.string().describe("Fecha de la transacción en formato YYYY-MM-DD"),
         description: z.string().describe("Concepto o descripción limpia del movimiento"),
         amount: z.number().describe("Importe de la transacción. Negativo para gastos, positivo para ingresos."),
-        category: z.string().describe("Categoría inferida (ej: Supermercado, Transporte, Nómina, Restaurantes)")
+        category: z.string().describe("Categoría inferida (ej: Supermercado, Transporte, Nómina, Restaurantes)"),
+        linkedAssetId: z.string().optional().describe("ID del activo vinculado si la transacción corresponde claramente a un activo del portfolio (alquiler, hipoteca, etc). Usar el ID exacto de la lista proporcionada. Dejar vacío si no hay correspondencia clara.")
     }))
 });
 
@@ -77,11 +82,47 @@ async function getAiModel() {
     }
 }
 
+// Build a compact portfolio summary for the AI context
+async function buildPortfolioContext(): Promise<string> {
+    const assets = await Asset.find({}, "_id name location keywords tenants.name tenants.monthlyRent").lean();
+    const liabilities = await Liability.find({}, "bank monthlyPayment loanNumber linkedAssetId type name").lean();
+
+    if (assets.length === 0 && liabilities.length === 0) return "";
+
+    const assetMap = new Map(assets.map((a: any) => [a._id.toString(), a.name]));
+
+    let context = "\n\nPORTFOLIO DEL USUARIO:";
+
+    if (assets.length > 0) {
+        context += "\nActivos:";
+        for (const a of assets as any[]) {
+            const tenantInfo = a.tenants?.length
+                ? `, Inquilinos: [${a.tenants.map((t: any) => `{nombre: "${t.name}", alquiler: ${t.monthlyRent}}`).join(", ")}]`
+                : "";
+            const keywordInfo = a.keywords?.length
+                ? `, Keywords: [${a.keywords.join(", ")}]`
+                : "";
+            context += `\n- ID: "${a._id}", Nombre: "${a.name}"${a.location ? `, Ubicación: "${a.location}"` : ""}${keywordInfo}${tenantInfo}`;
+        }
+    }
+
+    if (liabilities.length > 0) {
+        context += "\nPréstamos vinculados a activos:";
+        for (const l of liabilities as any[]) {
+            const assetName = l.linkedAssetId ? assetMap.get(l.linkedAssetId.toString()) : null;
+            const assetInfo = assetName ? `, activo: "${assetName}" (${l.linkedAssetId})` : "";
+            context += `\n- Banco: "${l.bank}", cuota: ${l.monthlyPayment}${l.loanNumber ? `, ref: "${l.loanNumber}"` : ""}${assetInfo}`;
+        }
+    }
+
+    return context;
+}
+
 export async function POST(req: Request) {
     try {
         const formData = await req.formData();
         const file = formData.get("file") as File;
-        const type = formData.get("type") as "statement" | "loan"; // Expected values from the frontend
+        const type = formData.get("type") as "statement" | "loan";
 
         if (!file) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -126,9 +167,18 @@ export async function POST(req: Request) {
         }
 
         const schema = type === 'statement' ? bankStatementSchema : loanDocumentSchema;
-        const systemPrompt = type === 'statement'
-            ? "You are an expert financial assistant. Analyze this bank statement and extract a structured list of transactions. Ensure amounts use the correct negative/positive sign."
-            : "You are an expert loan officer. You are scanning a loan or mortgage statement. ALWAYS focus on extracting the ORIGINATION details of the loan (capital originalmente concedido, plazo total en meses, fecha de firma original) rather than the point-in-time current balance. Extrae cuidadosamente todas las penalizaciones y comisiones asociadas descritas en las condiciones.";
+
+        let systemPrompt: string;
+        if (type === 'statement') {
+            const portfolioContext = await buildPortfolioContext();
+            systemPrompt = "You are an expert financial assistant. Analyze this bank statement and extract a structured list of transactions. Ensure amounts use the correct negative/positive sign."
+                + (portfolioContext
+                    ? "\n\nWhen a transaction clearly corresponds to one of the user's assets, set linkedAssetId to the asset's exact ID from the list below. Match by: keywords appearing in the transaction description, rent income matching a tenant's monthlyRent, or mortgage/loan payments matching a loan's monthly payment. Keywords are the strongest signal — if a transaction description contains an asset's keyword, link it to that asset."
+                    + portfolioContext
+                    : "");
+        } else {
+            systemPrompt = "You are an expert loan officer. You are scanning a loan or mortgage statement. ALWAYS focus on extracting the ORIGINATION details of the loan (capital originalmente concedido, plazo total en meses, fecha de firma original) rather than the point-in-time current balance. Extrae cuidadosamente todas las penalizaciones y comisiones asociadas descritas en las condiciones.";
+        }
 
         // @ts-ignore - The `ai` SDK handles image parts differently depending on version. We'll pass the content safely.
         const { object } = await generateObject({
@@ -138,7 +188,49 @@ export async function POST(req: Request) {
             messages: messages,
         });
 
-        return NextResponse.json(object);
+        // For loan documents, return directly (no batch needed)
+        if (type === 'loan') {
+            return NextResponse.json(object);
+        }
+
+        // For statements: enrich with historical data and create batch
+        const aiTransactions = (object as any).transactions || [];
+
+        const enrichedTransactions = await Promise.all(
+            aiTransactions.map(async (tx: any) => {
+                // Historical lookup for transactions the AI didn't link to an asset
+                if (!tx.linkedAssetId) {
+                    const historicalTx = await Transaction.findOne({
+                        description: tx.description,
+                        category: { $ne: "UNCATEGORIZED" },
+                    }).sort({ date: -1, createdAt: -1 });
+
+                    if (historicalTx) {
+                        return {
+                            ...tx,
+                            category: historicalTx.category || tx.category,
+                            linkedAssetId: historicalTx.linkedAssetId?.toString() || tx.linkedAssetId,
+                            tags: historicalTx.tags?.length ? historicalTx.tags : [],
+                            confirmed: false,
+                        };
+                    }
+                }
+
+                return { ...tx, tags: [], confirmed: false };
+            })
+        );
+
+        // Create IngestionBatch for paginated review
+        const batch = await IngestionBatch.create({
+            fileName: file.name,
+            transactions: enrichedTransactions,
+            totalCount: enrichedTransactions.length,
+            confirmedCount: 0,
+            status: "in_review",
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        });
+
+        return NextResponse.json({ batchId: batch._id, totalCount: batch.totalCount });
 
     } catch (error: any) {
         console.error("AI Ingestion Error:", error);

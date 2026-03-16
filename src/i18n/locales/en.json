@@ -91,7 +91,17 @@
         "amount": "Amount",
         "actions": "Actions",
         "split_principal": "Split Principal",
-        "load_more": "Load more transactions"
+        "load_more": "Load more transactions",
+        "review_title": "Review Import",
+        "page_of": "Page {page} of {total}",
+        "save_continue": "Save & Continue",
+        "save_finish": "Save & Finish",
+        "discard_batch": "Discard batch",
+        "corrections_applied": "{count} corrections applied",
+        "batch_not_found": "Batch not found or expired",
+        "back_to_ingestion": "Back to Ingestion",
+        "showing_of": "Showing {count} of {total} transactions",
+        "confirmed_of": "{confirmed} of {total} confirmed"
     },
     "projects": {
         "in_course": "In Progress",

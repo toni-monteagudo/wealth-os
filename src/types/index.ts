@@ -48,6 +48,7 @@ export interface IAsset {
     cadastralReference?: string;
     notes?: string;
     rentalYield?: number;
+    keywords?: string[];
     // Business specific
     mrr?: number;
     momGrowth?: number;
@@ -93,6 +94,7 @@ export interface ITransaction {
     splits?: Split[];
     linkedProjectId?: string;
     linkedAssetId?: string;
+    batchId?: string;
     source: "manual" | "csv_import";
     processingTime?: string;
 }
@@ -170,4 +172,29 @@ export interface ISettings {
     _id?: string;
     activeProvider: "openai" | "anthropic" | "google";
     providers: ProviderConfig[];
+}
+
+// Ingestion Batch (staging for AI-processed transactions)
+export type IngestionBatchStatus = "in_review" | "completed";
+
+export interface IStagedTransaction {
+    date: string;
+    description: string;
+    amount: number;
+    category: string;
+    linkedAssetId?: string;
+    linkedProjectId?: string;
+    tags?: string[];
+    confirmed: boolean;
+}
+
+export interface IIngestionBatch {
+    _id?: string;
+    fileName?: string;
+    transactions: IStagedTransaction[];
+    totalCount: number;
+    confirmedCount: number;
+    status: IngestionBatchStatus;
+    expiresAt?: Date;
+    createdAt?: Date;
 }

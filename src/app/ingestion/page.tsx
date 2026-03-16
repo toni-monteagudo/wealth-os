@@ -1,24 +1,26 @@
 "use client";
 
 import React, { useState } from "react";
-import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2, SplitSquareHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2, SplitSquareHorizontal, Package, Trash2, Eye, Loader2 } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
-import { ITransaction } from "@/types";
+import { ITransaction, IIngestionBatch } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LoanValidationForm } from "@/components/ingestion/LoanValidationForm";
-import { TransactionValidationList } from "@/components/ingestion/TransactionValidationList";
 
 export default function IngestionPage() {
+    const router = useRouter();
     const { data: txs, loading, mutate } = useApi<ITransaction[]>("/api/transactions");
+    const { data: batches, mutate: mutateBatches } = useApi<IIngestionBatch[]>("/api/ingestion/batches");
     const { t } = useI18n();
     const [isUploading, setIsUploading] = useState(false);
+    const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null);
 
     // AI Validation States
     const [loanDataToValidate, setLoanDataToValidate] = useState<any>(null);
-    const [txDataToValidate, setTxDataToValidate] = useState<any>(null);
 
     const needsReviewCount = txs?.filter(t => t.status === "needs_review").length || 0;
     const confirmedCount = txs?.filter(t => t.status === "confirmed").length || 0;
@@ -41,7 +43,10 @@ export default function IngestionPage() {
             if (res.ok) {
                 const data = await res.json();
                 if (type === "loan") setLoanDataToValidate(data);
-                if (type === "statement") setTxDataToValidate(data);
+                if (type === "statement" && data.batchId) {
+                    router.push(`/ingestion/review?batchId=${data.batchId}&page=1`);
+                    return;
+                }
             } else {
                 alert("Hubo un error al procesar el documento con IA.");
             }
@@ -50,12 +55,11 @@ export default function IngestionPage() {
             alert("Error de conexión con el motor de IA.");
         } finally {
             setIsUploading(false);
-            e.target.value = ''; // reset input
+            e.target.value = '';
         }
     };
 
     const handleLoanValidate = async (data: any) => {
-        // Send validated loan to API
         try {
             await fetch("/api/liabilities", {
                 method: "POST",
@@ -69,19 +73,20 @@ export default function IngestionPage() {
         }
     };
 
-    const handleTxValidate = async (data: any[]) => {
-        // Send batch of validated transactions to API
+    const handleDeleteBatch = async (batchId: string) => {
+        if (!confirm("¿Eliminar este lote y todas sus transacciones importadas?")) return;
+
+        setDeletingBatchId(batchId);
         try {
-            await fetch("/api/transactions/batch", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-            setTxDataToValidate(null);
-            mutate(); // Refresh the list
-            alert("Movimientos importados con éxito.");
+            const res = await fetch(`/api/ingestion/batches/${batchId}`, { method: "DELETE" });
+            if (res.ok) {
+                mutateBatches();
+                mutate();
+            }
         } catch (e) {
             console.error(e);
+        } finally {
+            setDeletingBatchId(null);
         }
     };
 
@@ -93,6 +98,20 @@ export default function IngestionPage() {
     const formatCurrency = (num: number) => {
         return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(num);
     };
+
+    const formatDate = (dateStr: string | Date | undefined) => {
+        if (!dateStr) return "—";
+        return new Date(dateStr).toLocaleDateString("es-ES", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const completedBatches = batches?.filter(b => b.status === "completed") || [];
+    const pendingBatches = batches?.filter(b => b.status === "in_review") || [];
 
     return (
         <main className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full flex flex-col gap-6">
@@ -129,18 +148,6 @@ export default function IngestionPage() {
                 </div>
             )}
 
-            {txDataToValidate && (
-                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-                    <div className="max-w-6xl w-full my-8">
-                        <TransactionValidationList
-                            initialData={txDataToValidate}
-                            onValidate={handleTxValidate}
-                            onCancel={() => setTxDataToValidate(null)}
-                        />
-                    </div>
-                </div>
-            )}
-
             {isUploading && (
                 <PremiumCard className="bg-emerald-50 border-emerald-100 flex items-center gap-4">
                     <div className="animate-spin size-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full"></div>
@@ -151,10 +158,39 @@ export default function IngestionPage() {
                 </PremiumCard>
             )}
 
-            {/* Grid: Stats & Timeline */}
+            {/* Pending batches (in_review) */}
+            {pendingBatches.length > 0 && (
+                <PremiumCard className="border-amber-100 bg-amber-50/30">
+                    <div className="flex items-center gap-2 mb-3">
+                        <AlertCircle size={16} className="text-amber-500" />
+                        <h3 className="text-xs font-bold text-amber-700 uppercase tracking-widest">Importaciones pendientes de revisión</h3>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {pendingBatches.map(batch => (
+                            <div key={batch._id} className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-amber-100">
+                                <div className="flex items-center gap-3">
+                                    <Package size={16} className="text-amber-500" />
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">{batch.fileName || "Extracto sin nombre"}</p>
+                                        <p className="text-[10px] text-slate-400">{formatDate(batch.createdAt)} — {batch.confirmedCount}/{batch.totalCount} confirmadas</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => router.push(`/ingestion/review?batchId=${batch._id}&page=1`)}
+                                    className="text-xs font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 transition-colors"
+                                >
+                                    Continuar revisión
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </PremiumCard>
+            )}
+
+            {/* Grid: Stats, Batch History & Timeline */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                {/* Left Col: Summary Stats */}
+                {/* Left Col: Summary Stats + Batch History */}
                 <div className="flex flex-col gap-4">
                     <PremiumCard>
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">{t("ingestion.processing_summary")}</h3>
@@ -182,6 +218,48 @@ export default function IngestionPage() {
                             </div>
                             <ProgressBar progress={(confirmedCount / total) * 100} colorClass="bg-emerald-500" />
                         </div>
+                    </PremiumCard>
+
+                    {/* Batch History */}
+                    <PremiumCard>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+                            <Package size={12} className="inline mr-1" /> Historial de Importaciones
+                        </h3>
+
+                        {completedBatches.length === 0 ? (
+                            <p className="text-xs text-slate-400 text-center py-4">Sin importaciones completadas.</p>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {completedBatches.map(batch => (
+                                    <div key={batch._id} className="group flex items-center justify-between bg-slate-50 hover:bg-slate-100 rounded-lg px-3 py-2.5 transition-colors">
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold text-slate-800 truncate">{batch.fileName || "Extracto"}</p>
+                                            <p className="text-[10px] text-slate-400">{formatDate(batch.createdAt)} — {batch.totalCount} txs</p>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => router.push(`/ingestion/review?batchId=${batch._id}&page=1`)}
+                                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                                title="Ver detalle"
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteBatch(batch._id!)}
+                                                disabled={deletingBatchId === batch._id}
+                                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-50"
+                                                title="Eliminar lote y transacciones"
+                                            >
+                                                {deletingBatchId === batch._id
+                                                    ? <Loader2 size={14} className="animate-spin" />
+                                                    : <Trash2 size={14} />
+                                                }
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </PremiumCard>
                 </div>
 

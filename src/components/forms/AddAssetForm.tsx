@@ -25,6 +25,7 @@ const INITIAL_STATE: Partial<IAsset> = {
     yearBuilt: undefined,
     cadastralReference: "",
     notes: "",
+    keywords: [],
     mrr: 0,
 };
 
@@ -218,6 +219,21 @@ export function AddAssetForm({ isOpen, onClose, onSuccess }: AddAssetFormProps) 
                         onChange={handleChange}
                     />
                 )}
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Palabras Clave (para auto-asignación IA)</label>
+                    <input
+                        type="text"
+                        value={(formData.keywords || []).join(", ")}
+                        onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            keywords: e.target.value.split(",").map(k => k.trim()).filter(Boolean)
+                        }))}
+                        placeholder="Ej. Stripe, Level Up, alquiler plaza"
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Separa con comas. Se usarán para vincular transacciones automáticamente.</p>
+                </div>
 
                 <div className="flex justify-end gap-3 mt-4">
                     <button

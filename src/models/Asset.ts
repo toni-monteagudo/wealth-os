@@ -21,6 +21,7 @@ const AssetSchema = new Schema<AssetDocument>(
         notes: { type: String },
         image: { type: String },
         rentalYield: { type: Number },
+        keywords: [{ type: String }],
         mrr: { type: Number },
         momGrowth: { type: Number },
         employees: [
