@@ -34,8 +34,19 @@ const AssetSchema = new Schema<AssetDocument>(
             {
                 name: { type: String },
                 avatar: { type: String },
-                contractUntil: { type: String },
+                phone: { type: String },
+                email: { type: String },
+                contractStart: { type: String },
+                contractEnd: { type: String },
                 monthlyRent: { type: Number },
+                deposit: { type: Number },
+                rentIncreases: [
+                    {
+                        date: { type: String },
+                        newRent: { type: Number },
+                    },
+                ],
+                notes: { type: String },
             },
         ],
     },

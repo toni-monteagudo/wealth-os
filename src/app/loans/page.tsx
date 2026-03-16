@@ -11,6 +11,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Plus } from "lucide-react";
 import { AddLiabilityForm } from "@/components/forms/AddLiabilityForm";
 import { calculateRemainingBalance } from "@/lib/utils";
+import { addMonths, format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function LoansPage() {
     const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -89,6 +91,7 @@ export default function LoansPage() {
                                         <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.balance")}</th>
                                         <th className="px-5 py-3 border-b border-slate-100 text-right">TIN / TAE</th>
                                         <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.monthly_payment")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100">Vencimiento</th>
                                         <th className="px-5 py-3 border-b border-slate-100">{t("loans.linked_asset")}</th>
                                     </tr>
                                 </thead>
@@ -120,6 +123,12 @@ export default function LoansPage() {
                                                     {liability.tae !== undefined && <span className="text-[10px] text-slate-400 font-medium ml-1">({liability.tae}%)</span>}
                                                 </td>
                                                 <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">{formatCurrency(liability.monthlyPayment)}</td>
+                                                <td className="px-5 py-4 text-slate-600 font-medium text-sm">
+                                                    {liability.startDate && liability.termMonths
+                                                        ? format(addMonths(new Date(liability.startDate), liability.termMonths), "MMM yyyy", { locale: es })
+                                                        : <span className="text-slate-400 text-xs">—</span>
+                                                    }
+                                                </td>
                                                 <td className="px-5 py-4">
                                                     {linkedAsset ? (
                                                         <Link href={`/assets/${linkedAsset._id}`} className="inline-flex items-center gap-1.5 text-accent hover:underline font-medium text-xs">
@@ -140,6 +149,7 @@ export default function LoansPage() {
                                         <td className="px-5 py-4 text-right text-lg text-rose-600 font-mono">{formatCurrency(totalDebt)}</td>
                                         <td className="px-5 py-4 text-right text-slate-400 font-mono">{avgInterest.toFixed(2)}%</td>
                                         <td className="px-5 py-4 text-right text-lg text-slate-900 font-mono">{formatCurrency(totalMonthly)}</td>
+                                        <td></td>
                                         <td></td>
                                     </tr>
                                 </tfoot>

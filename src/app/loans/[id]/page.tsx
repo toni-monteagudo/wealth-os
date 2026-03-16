@@ -60,69 +60,48 @@ export default function LoanDetailPage() {
         const annualRate = loan.tin !== undefined ? loan.tin : loan.interestRate;
         const months = loan.termMonths;
         const start = new Date(loan.startDate);
-        const now = new Date();
 
         const monthlyRate = (annualRate / 100) / 12;
-        
-        // 1. Calculate theoretical PMT to ensure graph zeroes out tracking past
-        const theoreticalPmt = monthlyRate > 0 
+
+        // Real monthly payment from the user; fallback to theoretical French PMT
+        const theoreticalPmt = monthlyRate > 0
             ? principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1)
             : principal / months;
+        const pmt = loan.monthlyPayment && loan.monthlyPayment > 0 ? loan.monthlyPayment : theoreticalPmt;
 
-        // 2. Identify reality check. If user gave us a specific monthly payment,
-        // it might be a rate-revised payment. We can deduce current balance using Present Value (PV)
-        const monthsElapsed = differenceInMonths(now, start);
-        const currentIndex = Math.max(0, Math.min(monthsElapsed - 1, months - 1));
-        const remainingMonths = months - currentIndex - 1;
-
-        let deducedCurrentBalance = 0;
-        const validMonthlyPmt = loan.monthlyPayment && loan.monthlyPayment > 0 ? loan.monthlyPayment : theoreticalPmt;
-        
-        if (validMonthlyPmt > 0 && monthlyRate > 0 && remainingMonths > 0) {
-            deducedCurrentBalance = validMonthlyPmt * (1 - Math.pow(1 + monthlyRate, -remainingMonths)) / monthlyRate;
-        }
+        // Recalculate what initial capital the bank used to arrive at `pmt`
+        // so the schedule zeroes out exactly at `months` with the real payment.
+        // PV = pmt * [ 1 - (1+r)^-n ] / r
+        const impliedPrincipal = monthlyRate > 0
+            ? pmt * (1 - Math.pow(1 + monthlyRate, -months)) / monthlyRate
+            : pmt * months;
 
         const schedule = [];
-        let activeBalance = principal;
-        let activePmt = theoreticalPmt;
+        let activeBalance = impliedPrincipal;
 
         for (let i = 1; i <= months; i++) {
             const interestPayment = activeBalance * monthlyRate;
-            let principalPayment = activePmt - interestPayment;
+            let payment = pmt;
+            let principalPayment = payment - interestPayment;
             let nextBalance = activeBalance - principalPayment;
 
-            // At the point of transition to the future, we inject the deduced reality
-            // This mirrors how a bank updates a "cuadro de amortización" after a rate revision
-            // ensuring the remaining schedule accurately matches the real current outstanding balance
-            let isTransition = false;
-            if (i === currentIndex + 1 && deducedCurrentBalance > 0 && Math.abs(deducedCurrentBalance - nextBalance) > 100) {
-                nextBalance = deducedCurrentBalance;
-                isTransition = true;
-            }
-
-            // Adjust last payment roundings or prevent negative balance
+            // Adjust last payment roundings
             if (i === months || nextBalance < 0.01) {
                 principalPayment = activeBalance;
-                activePmt = principalPayment + interestPayment;
+                payment = principalPayment + interestPayment;
                 nextBalance = 0;
             }
 
-            const paymentDate = addMonths(start, i);
-
             schedule.push({
                 month: i,
-                date: paymentDate,
-                payment: activePmt,
+                date: addMonths(start, i),
+                payment,
                 principalPayment,
                 interestPayment,
                 remainingBalance: Math.max(0, nextBalance)
             });
 
             activeBalance = nextBalance;
-            if (isTransition) {
-                activePmt = validMonthlyPmt;
-            }
-
             if (activeBalance <= 0) break;
         }
 
@@ -131,25 +110,38 @@ export default function LoanDetailPage() {
 
     // Current State Calculations
     const currentStatus = useMemo(() => {
-        if (!loan || !loan.startDate || amortizationSchedule.length === 0) return null;
-        
+        if (!loan || !loan.startDate || !loan.termMonths || amortizationSchedule.length === 0) return null;
+
         const now = new Date();
         const start = new Date(loan.startDate);
+        const annualRate = loan.tin !== undefined ? loan.tin : loan.interestRate;
+        const monthlyRate = (annualRate / 100) / 12;
         const monthsElapsed = differenceInMonths(now, start);
-        
-        // Find current schedule row
+
+        const theoreticalPmt = monthlyRate > 0
+            ? loan.initialCapital! * (monthlyRate * Math.pow(1 + monthlyRate, loan.termMonths)) / (Math.pow(1 + monthlyRate, loan.termMonths) - 1)
+            : loan.initialCapital! / loan.termMonths;
+        const pmt = loan.monthlyPayment && loan.monthlyPayment > 0 ? loan.monthlyPayment : theoreticalPmt;
+
+        // Remaining balance via PV of remaining payments (matches what the bank reports)
+        const monthsRemaining = Math.max(0, loan.termMonths - monthsElapsed);
+        let remainingBalance: number;
+        if (monthlyRate > 0 && monthsRemaining > 0) {
+            remainingBalance = pmt * (1 - Math.pow(1 + monthlyRate, -monthsRemaining)) / monthlyRate;
+        } else {
+            remainingBalance = pmt * monthsRemaining;
+        }
+
         const currentIndex = Math.max(0, Math.min(monthsElapsed - 1, amortizationSchedule.length - 1));
-        const currentRow = amortizationSchedule[currentIndex];
-        
         const totalInterestPaid = amortizationSchedule.slice(0, currentIndex + 1).reduce((s, row) => s + row.interestPayment, 0);
-        const totalPrincipalPaid = loan.initialCapital! - currentRow.remainingBalance;
+        const totalPrincipalPaid = loan.initialCapital! - remainingBalance;
 
         return {
-            remainingBalance: currentRow.remainingBalance,
+            remainingBalance,
             nextPaymentDate: amortizationSchedule[Math.min(currentIndex + 1, amortizationSchedule.length - 1)].date,
             totalInterestPaid,
             totalPrincipalPaid,
-            monthsRemaining: loan.termMonths! - (currentIndex + 1)
+            monthsRemaining
         };
     }, [loan, amortizationSchedule]);
 
@@ -321,6 +313,10 @@ export default function LoanDetailPage() {
                             <div className="flex justify-between items-center pb-3 border-b border-slate-100 text-sm">
                                 <span className="text-slate-500 font-medium">Fecha de firma</span>
                                 <span className="font-bold text-slate-900">{loan.startDate ? format(new Date(loan.startDate), "dd MMM yyyy", { locale: es }) : "No indicada"}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-3 border-b border-slate-100 text-sm">
+                                <span className="text-slate-500 font-medium">Fecha de vencimiento</span>
+                                <span className="font-bold text-slate-900">{loan.startDate && loan.termMonths ? format(addMonths(new Date(loan.startDate), loan.termMonths), "dd MMM yyyy", { locale: es }) : "No indicada"}</span>
                             </div>
                              <div className="flex justify-between items-center pb-3 border-b border-slate-100 text-sm">
                                 <span className="text-slate-500 font-medium">Día de pago mensual</span>

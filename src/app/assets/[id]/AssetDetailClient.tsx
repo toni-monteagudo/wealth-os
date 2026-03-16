@@ -4,15 +4,20 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
-import { IAsset, ILiability, ITransaction } from "@/types";
+import { IAsset, ILiability, ITransaction, Tenant } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { PremiumCard } from "@/components/ui/PremiumCard";
-import { Building2, Pencil, CalendarDays, Maximize, Landmark, ArrowRightLeft, Trash2, Unlink, Link as LinkIcon } from "lucide-react";
+import {
+    Building2, Pencil, CalendarDays, Maximize, Landmark, ArrowRightLeft, Trash2,
+    Unlink, Link as LinkIcon, UserPlus, Phone, Mail, ChevronDown, ChevronUp,
+    BedDouble, Bath, ArrowUpDown, CarFront, Calendar, Hash, TrendingUp, Banknote, PercentIcon
+} from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { calculateRemainingBalance } from "@/lib/utils";
 import { ConfirmDeleteModal } from "@/components/ui/ConfirmDeleteModal";
 import { EditAssetForm } from "@/components/forms/EditAssetForm";
 import { LinkLiabilityModal } from "@/components/forms/LinkLiabilityModal";
+import { AddTenantForm } from "@/components/forms/AddTenantForm";
 
 export default function AssetDetailClient() {
     const params = useParams();
@@ -26,6 +31,9 @@ export default function AssetDetailClient() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
+    const [editingTenant, setEditingTenant] = useState<Tenant | undefined>(undefined);
+    const [showHistoricTenants, setShowHistoricTenants] = useState(false);
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-100 rounded-2xl w-full"></div>;
     if (!asset) return <div className="text-center p-20 text-slate-500">Asset not found.</div>;
@@ -48,12 +56,23 @@ export default function AssetDetailClient() {
             });
             if (res.ok) {
                 mutate();
-                // We should also ideally refresh liabilities if they were fetched locally
-                // but window.location.reload() or triggering a top-level mutate works for now
                 window.location.reload();
             }
         } catch (error) {
             console.error("Failed to unlink", error);
+        }
+    };
+
+    const handleDeleteTenant = async (tenantId: string) => {
+        try {
+            const res = await fetch(`/api/assets/${id}/tenants`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tenantId }),
+            });
+            if (res.ok) mutate();
+        } catch (error) {
+            console.error("Failed to delete tenant", error);
         }
     };
 
@@ -66,6 +85,28 @@ export default function AssetDetailClient() {
         const lId = typeof l.linkedAssetId === "object" ? (l.linkedAssetId as any)._id : l.linkedAssetId;
         return lId === asset._id;
     }) || [];
+
+    // Tenant classification
+    const allTenants = asset.tenants || [];
+    const activeTenants = allTenants.filter(t => !t.contractEnd || new Date(t.contractEnd) >= new Date());
+    const historicTenants = allTenants.filter(t => t.contractEnd && new Date(t.contractEnd) < new Date());
+
+    // KPIs from real transactions
+    const txList = transactions || [];
+    const totalIncome = txList.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
+    const totalExpenses = txList.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0);
+    const cashFlow = totalIncome + totalExpenses;
+    const grossYield = asset.value > 0 ? (totalIncome / asset.value) * 100 : 0;
+
+    const openAddTenant = () => {
+        setEditingTenant(undefined);
+        setIsTenantModalOpen(true);
+    };
+
+    const openEditTenant = (tenant: Tenant) => {
+        setEditingTenant(tenant);
+        setIsTenantModalOpen(true);
+    };
 
     return (
         <div className="flex flex-col gap-6">
@@ -93,13 +134,13 @@ export default function AssetDetailClient() {
                     </div>
 
                     <div className="flex gap-2">
-                        <button 
+                        <button
                             onClick={() => setIsEditModalOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-lg font-bold text-sm shadow-lg hover:bg-slate-50 transition-colors"
                         >
                             <Pencil size={16} /> {t("asset_detail.edit_asset")}
                         </button>
-                        <button 
+                        <button
                             onClick={() => setIsDeleteModalOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg font-bold text-sm shadow-lg hover:bg-rose-700 transition-colors"
                         >
@@ -117,7 +158,7 @@ export default function AssetDetailClient() {
                 itemType="activo"
             />
 
-            <EditAssetForm 
+            <EditAssetForm
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
                 onSuccess={() => mutate()}
@@ -133,6 +174,14 @@ export default function AssetDetailClient() {
                 }}
                 assetId={asset._id!}
                 availableLiabilities={liabilities || []}
+            />
+
+            <AddTenantForm
+                isOpen={isTenantModalOpen}
+                onClose={() => setIsTenantModalOpen(false)}
+                onSuccess={() => mutate()}
+                assetId={asset._id!}
+                initialData={editingTenant}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -160,12 +209,145 @@ export default function AssetDetailClient() {
                         )}
                     </div>
 
+                    {/* KPIs from real bank transactions */}
+                    {asset.type === 'real_estate' && txList.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <PremiumCard className="bg-emerald-50 border-emerald-100">
+                                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><TrendingUp size={10} /> Ingresos Reales</p>
+                                <p className="text-2xl font-bold text-emerald-700">{formatCurrency(totalIncome)}</p>
+                            </PremiumCard>
+                            <PremiumCard className="bg-rose-50 border-rose-100">
+                                <p className="text-[10px] text-rose-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><Banknote size={10} /> Gastos Reales</p>
+                                <p className="text-2xl font-bold text-rose-700">{formatCurrency(totalExpenses)}</p>
+                            </PremiumCard>
+                            <PremiumCard className={cashFlow >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}>
+                                <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1 ${cashFlow >= 0 ? "text-emerald-600" : "text-rose-600"}`}><Banknote size={10} /> Cash Flow</p>
+                                <p className={`text-2xl font-bold ${cashFlow >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatCurrency(cashFlow)}</p>
+                            </PremiumCard>
+                            <PremiumCard className="bg-emerald-50 border-emerald-100">
+                                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><PercentIcon size={10} /> Rentabilidad Bruta</p>
+                                <p className="text-2xl font-bold text-emerald-700">{grossYield.toFixed(2)}%</p>
+                            </PremiumCard>
+                        </div>
+                    )}
+
                     <PremiumCard className="min-h-[300px] flex items-center justify-center bg-slate-50 border border-slate-200 shadow-none">
                         <div className="text-center text-slate-400">
                             <p className="font-bold mb-2">[{t("asset_detail.value_history")} Chart Placeholder]</p>
                             <p className="text-xs">Integrate Recharts AreaChart here mapping property valuation over time.</p>
                         </div>
                     </PremiumCard>
+
+                    {/* Tenants Section — full width in main column */}
+                    {asset.type === 'real_estate' && (
+                        <PremiumCard className="!p-0 overflow-hidden">
+                            <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest flex items-center gap-2">
+                                    <UserPlus size={16} className="text-indigo-500" /> {t("asset_detail.tenants")}
+                                </h3>
+                                <button
+                                    onClick={openAddTenant}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors"
+                                >
+                                    <UserPlus size={14} /> Añadir Inquilino
+                                </button>
+                            </div>
+
+                            {activeTenants.length === 0 && historicTenants.length === 0 ? (
+                                <div className="p-8 text-center text-slate-400 font-medium">
+                                    No hay inquilinos registrados. Añade uno para calcular la rentabilidad.
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {/* Active Tenants */}
+                                    {activeTenants.map((tenant) => (
+                                        <div key={tenant._id || tenant.name} className="p-5 flex items-start gap-4 hover:bg-slate-50 transition-colors">
+                                            <div className="size-11 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200 shrink-0 text-lg">
+                                                {tenant.name.charAt(0)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-sm font-bold text-slate-900">{tenant.name}</p>
+                                                    <Badge variant="success">Activo</Badge>
+                                                </div>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                                                    {tenant.phone && (
+                                                        <span className="flex items-center gap-1"><Phone size={10} /> {tenant.phone}</span>
+                                                    )}
+                                                    {tenant.email && (
+                                                        <span className="flex items-center gap-1"><Mail size={10} /> {tenant.email}</span>
+                                                    )}
+                                                    <span className="flex items-center gap-1">
+                                                        <CalendarDays size={10} /> Desde {tenant.contractStart}
+                                                        {tenant.contractEnd && ` hasta ${tenant.contractEnd}`}
+                                                    </span>
+                                                </div>
+                                                {tenant.deposit && (
+                                                    <p className="text-[10px] text-slate-400 mt-1">Fianza: {formatCurrency(tenant.deposit)}</p>
+                                                )}
+                                                {tenant.notes && (
+                                                    <p className="text-[10px] text-slate-400 mt-1 italic">{tenant.notes}</p>
+                                                )}
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-lg font-bold text-emerald-600">{formatCurrency(tenant.monthlyRent)}</p>
+                                                <p className="text-[10px] text-slate-400 font-medium">/mes</p>
+                                                <div className="flex gap-1 mt-2">
+                                                    <button
+                                                        onClick={() => openEditTenant(tenant)}
+                                                        className="px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => tenant._id && handleDeleteTenant(tenant._id)}
+                                                        className="px-2 py-1 text-[10px] font-bold text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Historic Tenants (collapsible) */}
+                                    {historicTenants.length > 0 && (
+                                        <>
+                                            <button
+                                                onClick={() => setShowHistoricTenants(!showHistoricTenants)}
+                                                className="w-full p-4 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider hover:bg-slate-50 transition-colors"
+                                            >
+                                                <span>Histórico ({historicTenants.length})</span>
+                                                {showHistoricTenants ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                            </button>
+                                            {showHistoricTenants && historicTenants.map((tenant) => (
+                                                <div key={tenant._id || tenant.name} className="p-5 flex items-start gap-4 bg-slate-50/50 opacity-70">
+                                                    <div className="size-11 rounded-full bg-slate-200 text-slate-500 font-bold flex items-center justify-center border border-slate-300 shrink-0 text-lg">
+                                                        {tenant.name.charAt(0)}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <p className="text-sm font-bold text-slate-600">{tenant.name}</p>
+                                                            <Badge variant="neutral">Finalizado</Badge>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                                                            <span className="flex items-center gap-1">
+                                                                <CalendarDays size={10} /> {tenant.contractStart} — {tenant.contractEnd}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-sm font-bold text-slate-500">{formatCurrency(tenant.monthlyRent)}</p>
+                                                        <p className="text-[10px] text-slate-400 font-medium">/mes</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </PremiumCard>
+                    )}
 
                     {/* Linked Transactions Section */}
                     <PremiumCard className="!p-0 overflow-hidden">
@@ -206,8 +388,59 @@ export default function AssetDetailClient() {
                     </PremiumCard>
                 </div>
 
-                {/* Side Column (Mortgage, Yield, Tenants) */}
+                {/* Side Column */}
                 <div className="flex flex-col gap-6">
+
+                    {/* Ficha Técnica — Real Estate */}
+                    {asset.type === 'real_estate' && (
+                        <PremiumCard>
+                            <h3 className="text-slate-900 font-bold text-sm uppercase tracking-widest mb-4">Ficha Técnica</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                {asset.bedrooms != null && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <BedDouble size={14} className="text-slate-400" />
+                                        <span className="text-slate-600">{asset.bedrooms} hab.</span>
+                                    </div>
+                                )}
+                                {asset.bathrooms != null && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Bath size={14} className="text-slate-400" />
+                                        <span className="text-slate-600">{asset.bathrooms} baños</span>
+                                    </div>
+                                )}
+                                {asset.area != null && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Maximize size={14} className="text-slate-400" />
+                                        <span className="text-slate-600">{asset.area} m²</span>
+                                    </div>
+                                )}
+                                {asset.yearBuilt != null && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Calendar size={14} className="text-slate-400" />
+                                        <span className="text-slate-600">Año {asset.yearBuilt}</span>
+                                    </div>
+                                )}
+                                {asset.hasElevator && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <ArrowUpDown size={14} className="text-emerald-500" />
+                                        <span className="text-slate-600">Ascensor</span>
+                                    </div>
+                                )}
+                                {asset.hasParking && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <CarFront size={14} className="text-emerald-500" />
+                                        <span className="text-slate-600">Garaje</span>
+                                    </div>
+                                )}
+                            </div>
+                            {asset.cadastralReference && (
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-400">
+                                    <Hash size={12} />
+                                    <span>Ref. Catastral: {asset.cadastralReference}</span>
+                                </div>
+                            )}
+                        </PremiumCard>
+                    )}
 
                     {/* Linked Loans from DB */}
                     {linkedLiabilities.length > 0 ? linkedLiabilities.map((mortgage) => (
@@ -217,7 +450,7 @@ export default function AssetDetailClient() {
                                     <Landmark size={18} className="text-rose-500" /> {t("asset_detail.active_mortgage")}
                                 </h3>
                                 <div className="flex items-center gap-2">
-                                    <button 
+                                    <button
                                         onClick={() => handleUnlink(mortgage._id!)}
                                         className="size-8 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-500 flex items-center justify-center transition-colors shadow-sm"
                                         title="Desvincular préstamo"
@@ -233,8 +466,21 @@ export default function AssetDetailClient() {
                                     <p className="text-rose-500 font-medium text-xs">Saldo Pendiente</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-bold text-slate-900">{mortgage.interestRate}%</p>
-                                    <p className="text-slate-400 font-medium text-[10px] uppercase tracking-wider">{t("asset_detail.interest_rate")}</p>
+                                    {(mortgage.tin != null || mortgage.tae != null) ? (
+                                        <div className="flex flex-col items-end gap-0.5">
+                                            {mortgage.tin != null && (
+                                                <p className="text-sm font-bold text-slate-900">TIN {mortgage.tin}%</p>
+                                            )}
+                                            {mortgage.tae != null && (
+                                                <p className="text-xs font-medium text-slate-500">TAE {mortgage.tae}%</p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-sm font-bold text-slate-900">{mortgage.interestRate}%</p>
+                                            <p className="text-slate-400 font-medium text-[10px] uppercase tracking-wider">{t("asset_detail.interest_rate")}</p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -263,32 +509,12 @@ export default function AssetDetailClient() {
                     )}
 
                     {/* Add Existing Mortgage Button */}
-                    <button 
+                    <button
                         onClick={() => setIsLinkModalOpen(true)}
                         className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 text-slate-500 font-bold text-sm rounded-xl hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50 transition-colors"
                     >
                         <LinkIcon size={16} /> Vincular Préstamo
                     </button>
-
-                    {/* Tenants */}
-                    {asset.type === 'real_estate' && asset.tenants && asset.tenants.length > 0 && (
-                        <PremiumCard>
-                            <h3 className="text-slate-900 font-bold text-sm uppercase tracking-widest mb-4">{t("asset_detail.tenants")}</h3>
-                            {asset.tenants.map((tenant, idx) => (
-                                <div key={idx} className="flex items-center gap-3">
-                                    <div className="size-10 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200">
-                                        {tenant.name.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-900">{tenant.name}</p>
-                                        <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
-                                            <CalendarDays size={10} /> Hasta {tenant.contractUntil}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </PremiumCard>
-                    )}
 
                     {asset.type === 'business' && (
                         <PremiumCard className="bg-indigo-50 border-indigo-100">

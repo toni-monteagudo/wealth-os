@@ -10,11 +10,23 @@ export interface Employee {
     avatar?: string;
 }
 
+export interface RentIncrease {
+    date: string;
+    newRent: number;
+}
+
 export interface Tenant {
+    _id?: string;
     name: string;
     avatar?: string;
-    contractUntil?: string;
+    phone?: string;
+    email?: string;
+    contractStart: string;
+    contractEnd?: string;
     monthlyRent: number;
+    deposit?: number;
+    rentIncreases?: RentIncrease[];
+    notes?: string;
 }
 
 export interface IAsset {
