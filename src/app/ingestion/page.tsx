@@ -2,22 +2,27 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2, SplitSquareHorizontal, Package, Trash2, Eye, Loader2 } from "lucide-react";
+import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2, SplitSquareHorizontal, Package, Trash2, Eye, Loader2, Tag, Plus, X } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
-import { ITransaction, IIngestionBatch } from "@/types";
+import { ITransaction, IIngestionBatch, ICategory } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LoanValidationForm } from "@/components/ingestion/LoanValidationForm";
+import { ConfirmDeleteModal } from "@/components/ui/ConfirmDeleteModal";
 
 export default function IngestionPage() {
     const router = useRouter();
     const { data: txs, loading, mutate } = useApi<ITransaction[]>("/api/transactions");
     const { data: batches, mutate: mutateBatches } = useApi<IIngestionBatch[]>("/api/ingestion/batches");
+    const { data: categories, mutate: mutateCategories } = useApi<ICategory[]>("/api/categories");
     const { t } = useI18n();
     const [isUploading, setIsUploading] = useState(false);
     const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null);
+    const [newCategoryName, setNewCategoryName] = useState("");
+    const [showCategories, setShowCategories] = useState(false);
+    const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
 
     // AI Validation States
     const [loanDataToValidate, setLoanDataToValidate] = useState<any>(null);
@@ -87,6 +92,39 @@ export default function IngestionPage() {
             console.error(e);
         } finally {
             setDeletingBatchId(null);
+        }
+    };
+
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return;
+        try {
+            await fetch("/api/categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newCategoryName.trim() }),
+            });
+            setNewCategoryName("");
+            mutateCategories();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleDeleteCategory = async (id: string) => {
+        try {
+            await fetch(`/api/categories?id=${id}`, { method: "DELETE" });
+            mutateCategories();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handlePurgeAll = async () => {
+        const res = await fetch("/api/ingestion/purge", { method: "DELETE" });
+        if (res.ok) {
+            mutate();
+            mutateBatches();
+            setIsPurgeModalOpen(false);
         }
     };
 
@@ -260,6 +298,63 @@ export default function IngestionPage() {
                                 ))}
                             </div>
                         )}
+
+                        {(completedBatches.length > 0 || (txs && txs.length > 0)) && (
+                            <button
+                                onClick={() => setIsPurgeModalOpen(true)}
+                                className="mt-3 w-full text-[11px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 py-2 rounded-lg border border-transparent hover:border-rose-200 transition-colors flex items-center justify-center gap-1.5"
+                            >
+                                <Trash2 size={12} /> Eliminar todo
+                            </button>
+                        )}
+                    </PremiumCard>
+
+                    {/* Categories Manager */}
+                    <PremiumCard>
+                        <button
+                            onClick={() => setShowCategories(!showCategories)}
+                            className="w-full flex items-center justify-between"
+                        >
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                <Tag size={12} className="inline mr-1" /> Categorías ({categories?.length || 0})
+                            </h3>
+                            <span className="text-[10px] font-bold text-slate-400">{showCategories ? "Ocultar" : "Mostrar"}</span>
+                        </button>
+
+                        {showCategories && (
+                            <div className="mt-4">
+                                <div className="flex gap-2 mb-3">
+                                    <input
+                                        type="text"
+                                        value={newCategoryName}
+                                        onChange={(e) => setNewCategoryName(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+                                        placeholder="Nueva categoría..."
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 uppercase"
+                                    />
+                                    <button
+                                        onClick={handleAddCategory}
+                                        disabled={!newCategoryName.trim()}
+                                        className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors disabled:opacity-50"
+                                    >
+                                        <Plus size={14} />
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 max-h-[200px] overflow-y-auto">
+                                    {categories?.map(cat => (
+                                        <span key={cat._id} className="group inline-flex items-center gap-1 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-[10px] font-bold text-slate-600 uppercase">
+                                            {cat.name}
+                                            <button
+                                                onClick={() => handleDeleteCategory(cat._id!)}
+                                                className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </PremiumCard>
                 </div>
 
@@ -339,6 +434,15 @@ export default function IngestionPage() {
                 </div>
 
             </div>
+
+            <ConfirmDeleteModal
+                isOpen={isPurgeModalOpen}
+                onClose={() => setIsPurgeModalOpen(false)}
+                onConfirm={handlePurgeAll}
+                itemName="todas las transacciones"
+                itemType="historial completo de"
+                description="Esta acción borrará permanentemente todas las transacciones importadas y todo el historial de importaciones. No se puede deshacer."
+            />
         </main>
     );
 }

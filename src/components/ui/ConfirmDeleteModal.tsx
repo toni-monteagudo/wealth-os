@@ -10,10 +10,11 @@ interface ConfirmDeleteModalProps {
     onClose: () => void;
     onConfirm: () => Promise<void>;
     itemName: string;
-    itemType: "activo" | "préstamo";
+    itemType: string;
+    description?: string;
 }
 
-export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, itemName, itemType }: ConfirmDeleteModalProps) {
+export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, itemName, itemType, description }: ConfirmDeleteModalProps) {
     const [inputValue, setInputValue] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -44,7 +45,7 @@ export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, itemName, itemT
                     <AlertTriangle className="mt-0.5 shrink-0" size={20} />
                     <div className="text-sm">
                         <p className="font-bold mb-1">¿Estás completamente seguro?</p>
-                        <p className="text-rose-700/80">Esta acción borrará permanentemente este {itemType} y no se puede deshacer. Todos los datos, historiales de amortización y cálculos asociados a él desaparecerán.</p>
+                        <p className="text-rose-700/80">{description || `Esta acción borrará permanentemente este ${itemType} y no se puede deshacer. Todos los datos, historiales de amortización y cálculos asociados a él desaparecerán.`}</p>
                     </div>
                 </div>
 

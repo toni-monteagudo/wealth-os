@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { FormField } from "@/components/ui/FormField";
 import { IAsset } from "@/types";
@@ -222,17 +223,42 @@ export function AddAssetForm({ isOpen, onClose, onSuccess }: AddAssetFormProps) 
 
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Palabras Clave (para auto-asignación IA)</label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                        {(formData.keywords || []).map((kw, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 text-xs font-bold text-emerald-700">
+                                {kw}
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({
+                                        ...prev,
+                                        keywords: (prev.keywords || []).filter((_, idx) => idx !== i)
+                                    }))}
+                                    className="text-emerald-400 hover:text-rose-500 transition-colors"
+                                >
+                                    <X size={12} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
                     <input
                         type="text"
-                        value={(formData.keywords || []).join(", ")}
-                        onChange={(e) => setFormData(prev => ({
-                            ...prev,
-                            keywords: e.target.value.split(",").map(k => k.trim()).filter(Boolean)
-                        }))}
-                        placeholder="Ej. Stripe, Level Up, alquiler plaza"
+                        placeholder="Escribe y pulsa Enter..."
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                const value = e.currentTarget.value.trim();
+                                if (value && !(formData.keywords || []).includes(value)) {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        keywords: [...(prev.keywords || []), value]
+                                    }));
+                                    e.currentTarget.value = "";
+                                }
+                            }
+                        }}
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Separa con comas. Se usarán para vincular transacciones automáticamente.</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Pulsa Enter para añadir. Se usarán para vincular transacciones automáticamente.</p>
                 </div>
 
                 <div className="flex justify-end gap-3 mt-4">
