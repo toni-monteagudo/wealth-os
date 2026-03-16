@@ -155,6 +155,26 @@ export default function ReviewClient() {
         }
     };
 
+    const handleConfirmAll = async () => {
+        if (!batchId || !confirm(`¿Aceptar y guardar las ${batch?.totalCount} transacciones del lote?`)) return;
+        setIsSaving(true);
+
+        try {
+            const res = await fetch(`/api/ingestion/batches/${batchId}/confirm-all`, {
+                method: "PUT",
+            });
+
+            if (!res.ok) throw new Error("Failed to confirm all");
+
+            router.push("/ingestion");
+        } catch (error) {
+            console.error(error);
+            alert("Error al guardar el lote completo.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleDiscard = async () => {
         if (!batchId || !confirm("¿Descartar toda la importación?")) return;
 
@@ -217,12 +237,22 @@ export default function ReviewClient() {
                         {batch.totalCount} transacciones detectadas — Revisa la categorización y vincula a activos.
                     </p>
                 </div>
-                <button
-                    onClick={handleDiscard}
-                    className="text-sm font-bold text-red-500 hover:text-red-700 transition-colors"
-                >
-                    Descartar lote
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleConfirmAll}
+                        disabled={isSaving}
+                        className="text-sm font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                        Aceptar y guardar lote
+                    </button>
+                    <button
+                        onClick={handleDiscard}
+                        className="text-sm font-bold text-red-500 hover:text-red-700 transition-colors"
+                    >
+                        Descartar lote
+                    </button>
+                </div>
             </div>
 
             {/* AI Suggested Categories */}
