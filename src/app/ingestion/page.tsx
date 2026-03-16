@@ -27,6 +27,17 @@ export default function IngestionPage() {
     // AI Validation States
     const [loanDataToValidate, setLoanDataToValidate] = useState<any>(null);
 
+    // SSE upload progress for statements
+    const [uploadProgress, setUploadProgress] = useState<{
+        phase: string;
+        chunk?: number;
+        totalChunks?: number;
+        processed?: number;
+        total?: number;
+        parsedCount?: number;
+        message?: string;
+    } | null>(null);
+
     const needsReviewCount = txs?.filter(t => t.status === "needs_review").length || 0;
     const confirmedCount = txs?.filter(t => t.status === "confirmed").length || 0;
     const total = txs?.length || 0;
@@ -36,6 +47,7 @@ export default function IngestionPage() {
         if (!file) return;
 
         setIsUploading(true);
+        setUploadProgress(null);
         const formData = new FormData();
         formData.append("file", file);
         formData.append("type", type);
@@ -45,21 +57,61 @@ export default function IngestionPage() {
                 method: "POST",
                 body: formData,
             });
-            if (res.ok) {
-                const data = await res.json();
-                if (type === "loan") setLoanDataToValidate(data);
-                if (type === "statement" && data.batchId) {
-                    router.push(`/ingestion/review?batchId=${data.batchId}&page=1`);
-                    return;
+
+            if (type === "loan") {
+                // Loan path: simple JSON response (unchanged)
+                if (res.ok) {
+                    const data = await res.json();
+                    setLoanDataToValidate(data);
+                } else {
+                    alert("Hubo un error al procesar el documento con IA.");
                 }
             } else {
-                alert("Hubo un error al procesar el documento con IA.");
+                // Statement path: SSE stream
+                if (!res.body) {
+                    alert("Hubo un error al procesar el documento.");
+                    return;
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                setUploadProgress(data);
+
+                                if (data.phase === "complete") {
+                                    router.push(`/ingestion/review?batchId=${data.batchId}&page=1`);
+                                    return;
+                                }
+                                if (data.phase === "error") {
+                                    alert(data.message || "Error al analizar el documento.");
+                                    return;
+                                }
+                            } catch {
+                                // Ignore malformed SSE lines
+                            }
+                        }
+                    }
+                }
             }
         } catch (error) {
             console.error(error);
             alert("Error de conexión con el motor de IA.");
         } finally {
             setIsUploading(false);
+            setUploadProgress(null);
             e.target.value = '';
         }
     };
@@ -187,12 +239,33 @@ export default function IngestionPage() {
             )}
 
             {isUploading && (
-                <PremiumCard className="bg-emerald-50 border-emerald-100 flex items-center gap-4">
-                    <div className="animate-spin size-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full"></div>
-                    <div>
-                        <p className="font-bold text-emerald-800">{t("ingestion.analyzing_statements")}</p>
-                        <p className="text-sm text-emerald-600">Aplicando reglas NLP y heurísticas de categorización...</p>
+                <PremiumCard className="bg-emerald-50 border-emerald-100">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="animate-spin size-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold text-emerald-800">
+                                {!uploadProgress && "Preparando..."}
+                                {uploadProgress?.phase === "parsing" && "Parseando CSV..."}
+                                {uploadProgress?.phase === "detecting" && "Detectando formato de columnas..."}
+                                {uploadProgress?.phase === "parsed" && `${uploadProgress.parsedCount?.toLocaleString("es-ES")} transacciones detectadas`}
+                                {uploadProgress?.phase === "categorizing" && `Categorizando con IA — Bloque ${uploadProgress.chunk} de ${uploadProgress.totalChunks}`}
+                                {uploadProgress?.phase === "enriching" && "Enriqueciendo con datos históricos..."}
+                            </p>
+                            <p className="text-sm text-emerald-600">
+                                {(!uploadProgress || uploadProgress.phase === "parsing") && "Analizando estructura del fichero..."}
+                                {uploadProgress?.phase === "detecting" && "Usando IA para identificar columnas del CSV..."}
+                                {uploadProgress?.phase === "parsed" && "Preparando categorización por bloques..."}
+                                {uploadProgress?.phase === "categorizing" && `${uploadProgress.processed?.toLocaleString("es-ES")} / ${uploadProgress.total?.toLocaleString("es-ES")} transacciones procesadas`}
+                                {uploadProgress?.phase === "enriching" && "Aplicando categorías de importaciones anteriores..."}
+                            </p>
+                        </div>
                     </div>
+                    {uploadProgress?.phase === "categorizing" && uploadProgress.total && uploadProgress.processed !== undefined && (
+                        <ProgressBar
+                            progress={(uploadProgress.processed / uploadProgress.total) * 100}
+                            colorClass="bg-emerald-500"
+                        />
+                    )}
                 </PremiumCard>
             )}
 

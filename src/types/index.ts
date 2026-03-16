@@ -174,6 +174,14 @@ export interface ISettings {
     providers: ProviderConfig[];
 }
 
+// Categories
+export interface ICategory {
+    _id?: string;
+    name: string;
+    icon?: string;
+    color?: string;
+}
+
 // Ingestion Batch (staging for AI-processed transactions)
 export type IngestionBatchStatus = "in_review" | "completed";
 
@@ -188,13 +196,23 @@ export interface IStagedTransaction {
     confirmed: boolean;
 }
 
+export interface IProcessingStats {
+    parseTimeMs: number;
+    categorizeTimeMs: number;
+    totalChunks: number;
+    retriedChunks: number;
+    fallbackChunks: number;
+}
+
 export interface IIngestionBatch {
     _id?: string;
     fileName?: string;
     transactions: IStagedTransaction[];
+    suggestedCategories?: string[];
     totalCount: number;
     confirmedCount: number;
     status: IngestionBatchStatus;
     expiresAt?: Date;
     createdAt?: Date;
+    processingStats?: IProcessingStats;
 }

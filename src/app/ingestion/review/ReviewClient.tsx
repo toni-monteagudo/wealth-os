@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { useApi } from "@/hooks/useApi";
-import { IAsset, IProject, IIngestionBatch, IStagedTransaction } from "@/types";
+import { IAsset, IProject, IIngestionBatch, IStagedTransaction, ICategory } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 
 const PAGE_SIZE = 20;
@@ -28,31 +28,38 @@ export default function ReviewClient() {
 
     const batchId = searchParams.get("batchId");
     const pageParam = parseInt(searchParams.get("page") || "1", 10);
-    const pageIndex = pageParam - 1; // 0-based
+    const pageIndex = pageParam - 1;
 
     const { data: batch, loading, mutate } = useApi<IIngestionBatch>(
         batchId ? `/api/ingestion/batches/${batchId}` : ""
     );
     const { data: assets } = useApi<IAsset[]>("/api/assets");
     const { data: projects } = useApi<IProject[]>("/api/projects");
+    const { data: categories, mutate: mutateCategories } = useApi<ICategory[]>("/api/categories");
 
-    // Correction map for in-session learning
     const [corrections, setCorrections] = useState<Record<string, CorrectionEntry>>({});
-    // Local editable state for current page's transactions
     const [pageTransactions, setPageTransactions] = useState<IStagedTransaction[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set());
+    const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
     const totalPages = batch ? Math.ceil(batch.totalCount / PAGE_SIZE) : 0;
     const isLastPage = pageParam >= totalPages;
 
-    // Slice current page from batch and apply corrections
+    // Category names list for the select
+    const categoryNames = categories?.map(c => c.name) || [];
+
+    // Pending AI suggestions (not yet accepted or dismissed)
+    const pendingSuggestions = (batch?.suggestedCategories || []).filter(
+        s => !acceptedSuggestions.has(s) && !dismissedSuggestions.has(s) && !categoryNames.includes(s)
+    );
+
     useEffect(() => {
         if (!batch?.transactions) return;
 
         const start = pageIndex * PAGE_SIZE;
         const end = start + PAGE_SIZE;
         const slice = batch.transactions.slice(start, end).map(tx => {
-            // Apply corrections from previous pages
             const key = normalizeDescription(tx.description);
             const correction = corrections[key];
             if (correction && !tx.confirmed) {
@@ -74,7 +81,6 @@ export default function ReviewClient() {
             const updated = [...prev];
             updated[index] = { ...updated[index], [field]: value };
 
-            // Store correction for in-session learning
             const key = normalizeDescription(updated[index].description);
             setCorrections(prev => ({
                 ...prev,
@@ -86,7 +92,6 @@ export default function ReviewClient() {
                 },
             }));
 
-            // Propagate correction to other transactions on the same page with same description
             if (field === "category" || field === "linkedAssetId" || field === "linkedProjectId") {
                 for (let i = 0; i < updated.length; i++) {
                     if (i !== index && normalizeDescription(updated[i].description) === key) {
@@ -98,6 +103,24 @@ export default function ReviewClient() {
             return updated;
         });
     }, []);
+
+    const handleAcceptSuggestion = async (name: string) => {
+        try {
+            await fetch("/api/categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name }),
+            });
+            setAcceptedSuggestions(prev => new Set(prev).add(name));
+            mutateCategories();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleDismissSuggestion = (name: string) => {
+        setDismissedSuggestions(prev => new Set(prev).add(name));
+    };
 
     const handleConfirmPage = async () => {
         if (!batchId) return;
@@ -202,6 +225,37 @@ export default function ReviewClient() {
                 </button>
             </div>
 
+            {/* AI Suggested Categories */}
+            {pendingSuggestions.length > 0 && (
+                <PremiumCard className="border-indigo-100 bg-indigo-50/30 !py-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Sparkles size={14} className="text-indigo-500" />
+                        <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-widest">Categorías sugeridas por la IA</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {pendingSuggestions.map(name => (
+                            <div key={name} className="flex items-center gap-1 bg-white border border-indigo-200 rounded-lg px-3 py-1.5">
+                                <span className="text-xs font-bold text-indigo-800">{name}</span>
+                                <button
+                                    onClick={() => handleAcceptSuggestion(name)}
+                                    className="p-0.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                    title="Aceptar categoría"
+                                >
+                                    <Plus size={14} />
+                                </button>
+                                <button
+                                    onClick={() => handleDismissSuggestion(name)}
+                                    className="p-0.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors"
+                                    title="Descartar"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </PremiumCard>
+            )}
+
             {/* Progress bar */}
             <PremiumCard className="!py-4">
                 <div className="flex items-center justify-between mb-2">
@@ -263,24 +317,28 @@ export default function ReviewClient() {
                                                 {formatCurrency(tx.amount)}
                                             </span>
                                         </td>
-                                        <td className="px-5 py-3 relative">
+                                        <td className="px-5 py-3">
                                             <div className="relative flex items-center">
-                                                <input
-                                                    type="text"
+                                                <select
                                                     value={tx.category}
                                                     onChange={(e) => handleTxChange(idx, "category", e.target.value)}
-                                                    className={`w-full border-none rounded-md px-2 py-1.5 text-[11px] font-bold text-slate-600 focus:ring-2 focus:ring-emerald-500/20 uppercase ${
-                                                        tx.category !== "UNCATEGORIZED"
-                                                            ? "pr-6 text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200"
-                                                            : "bg-slate-100"
+                                                    className={`w-full rounded-md px-2 py-1.5 text-[11px] font-bold uppercase focus:ring-2 focus:ring-emerald-500/20 appearance-none cursor-pointer ${
+                                                        tx.category !== "OTROS"
+                                                            ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                                                            : "text-slate-600 bg-slate-100 border border-slate-200"
                                                     }`}
-                                                />
-                                                {tx.category !== "UNCATEGORIZED" && (
-                                                    <div
-                                                        className="absolute right-2 text-emerald-500"
-                                                        title={wasCorrected ? "Auto-corregido por tu revisión" : "Categorizado por IA"}
-                                                    >
-                                                        {wasCorrected ? <Sparkles size={12} /> : "✨"}
+                                                >
+                                                    {categoryNames.map(name => (
+                                                        <option key={name} value={name}>{name}</option>
+                                                    ))}
+                                                    {/* If current value is not in the list, show it anyway */}
+                                                    {tx.category && !categoryNames.includes(tx.category) && (
+                                                        <option value={tx.category}>{tx.category} (nueva)</option>
+                                                    )}
+                                                </select>
+                                                {wasCorrected && (
+                                                    <div className="absolute right-5 text-emerald-500 pointer-events-none" title="Auto-corregido por tu revisión">
+                                                        <Sparkles size={10} />
                                                     </div>
                                                 )}
                                             </div>

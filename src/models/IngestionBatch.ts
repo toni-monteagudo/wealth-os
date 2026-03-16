@@ -21,11 +21,19 @@ const IngestionBatchSchema = new Schema<IngestionBatchDocument>(
     {
         fileName: { type: String },
         transactions: [StagedTransactionSchema],
+        suggestedCategories: [{ type: String }],
         totalCount: { type: Number, required: true },
         confirmedCount: { type: Number, default: 0 },
         status: { type: String, enum: ["in_review", "completed"], default: "in_review" },
         // TTL field: only set for in_review batches, cleared on completion
         expiresAt: { type: Date },
+        processingStats: {
+            parseTimeMs: { type: Number },
+            categorizeTimeMs: { type: Number },
+            totalChunks: { type: Number },
+            retriedChunks: { type: Number },
+            fallbackChunks: { type: Number },
+        },
     },
     { timestamps: true }
 );

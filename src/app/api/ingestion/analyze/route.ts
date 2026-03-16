@@ -10,17 +10,10 @@ import Asset from "@/models/Asset";
 import Liability from "@/models/Liability";
 import Transaction from "@/models/Transaction";
 import IngestionBatch from "@/models/IngestionBatch";
-
-// Zod schemas for structured extraction
-const bankStatementSchema = z.object({
-    transactions: z.array(z.object({
-        date: z.string().describe("Fecha de la transacción en formato YYYY-MM-DD"),
-        description: z.string().describe("Concepto o descripción limpia del movimiento"),
-        amount: z.number().describe("Importe de la transacción. Negativo para gastos, positivo para ingresos."),
-        category: z.string().describe("Categoría inferida (ej: Supermercado, Transporte, Nómina, Restaurantes)"),
-        linkedAssetId: z.string().optional().describe("ID del activo vinculado si la transacción corresponde claramente a un activo del portfolio (alquiler, hipoteca, etc). Usar el ID exacto de la lista proporcionada. Dejar vacío si no hay correspondencia clara.")
-    }))
-});
+import Category, { DEFAULT_CATEGORIES } from "@/models/Category";
+import { parseBankCsv, parseBankCsvWithMapping, xlsxToCsv } from "@/lib/csv-parser";
+import { detectColumnsWithAI } from "@/lib/csv-column-detector";
+import { categorizeInChunks } from "@/lib/transaction-categorizer";
 
 const loanDocumentSchema = z.object({
     bank: z.string().describe("Nombre de la entidad bancaria o prestamista"),
@@ -64,12 +57,9 @@ async function getAiModel() {
         case 'google':
             const google = createGoogleGenerativeAI({ apiKey: providerConfig.apiKey });
             let modelName = providerConfig.model || 'gemini-1.5-pro';
-            // Google SDK automatically prepends "models/" if not present, but sometimes causes issues if double-prefixed or aliased incorrectly. 
-            // We strip "models/" if the user typed it, just to be safe.
             if (modelName.startsWith('models/')) {
                 modelName = modelName.replace('models/', '');
             }
-            // Some API regions/keys reject the bare 'gemini-1.5-flash' name. Alias it to the latest version.
             if (modelName === 'gemini-1.5-flash') {
                 modelName = 'gemini-1.5-flash-latest';
             }
@@ -118,6 +108,201 @@ async function buildPortfolioContext(): Promise<string> {
     return context;
 }
 
+// SSE helper
+function sseEvent(data: Record<string, any>): string {
+    return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+// ── LOAN DOCUMENT HANDLER (unchanged single AI call) ──
+async function handleLoanDocument(buffer: Buffer, mimeType: string, model: any): Promise<Response> {
+    const base64Content = buffer.toString('base64');
+
+    let messages: any[];
+    if (mimeType === 'text/csv' || mimeType.includes('text/')) {
+        const textContent = buffer.toString('utf8');
+        messages = [{ role: 'user', content: [{ type: "text", text: `Please extract data from the following document:\n\n${textContent}` }] }];
+    } else {
+        messages = [{
+            role: 'user',
+            content: [
+                { type: "text", text: "Please extract structured data from this document based on the required schema." },
+                { type: "image", image: `data:${mimeType};base64,${base64Content}` },
+            ],
+        }];
+    }
+
+    const systemPrompt = "You are an expert loan officer. You are scanning a loan or mortgage statement. ALWAYS focus on extracting the ORIGINATION details of the loan (capital originalmente concedido, plazo total en meses, fecha de firma original) rather than the point-in-time current balance. Extrae cuidadosamente todas las penalizaciones y comisiones asociadas descritas en las condiciones.";
+
+    // @ts-ignore
+    const { object } = await generateObject({
+        model,
+        schema: loanDocumentSchema,
+        system: systemPrompt,
+        messages,
+    });
+
+    return NextResponse.json(object);
+}
+
+// ── STATEMENT HANDLER (new chunked pipeline with SSE) ──
+async function handleStatement(file: File, buffer: Buffer, mimeType: string, model: any): Promise<Response> {
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+        async start(controller) {
+            try {
+                const parseStart = Date.now();
+
+                // ── PHASE 1: Parse CSV deterministically ──
+                controller.enqueue(encoder.encode(sseEvent({ phase: "parsing", message: "Parsing CSV..." })));
+
+                let csvText: string;
+                if (mimeType.includes("spreadsheet") || mimeType.includes("excel") || file.name.match(/\.xlsx?$/i)) {
+                    csvText = xlsxToCsv(buffer);
+                } else {
+                    csvText = buffer.toString("utf8");
+                }
+
+                let parseResult = parseBankCsv(csvText);
+
+                // ── PHASE 1b: AI column detection fallback ──
+                if (!parseResult) {
+                    controller.enqueue(encoder.encode(sseEvent({ phase: "detecting", message: "Detecting CSV column format with AI..." })));
+
+                    try {
+                        const columnMapping = await detectColumnsWithAI(csvText, model);
+                        parseResult = parseBankCsvWithMapping(csvText, columnMapping);
+                    } catch (detectError: any) {
+                        controller.enqueue(encoder.encode(sseEvent({
+                            phase: "error",
+                            message: "No se pudo detectar el formato del CSV. Asegúrate de que tiene columnas de fecha, concepto e importe.",
+                        })));
+                        controller.close();
+                        return;
+                    }
+
+                    if (!parseResult) {
+                        controller.enqueue(encoder.encode(sseEvent({
+                            phase: "error",
+                            message: "No se pudo parsear el CSV incluso tras detectar las columnas. Revisa el formato del archivo.",
+                        })));
+                        controller.close();
+                        return;
+                    }
+                }
+
+                const parseTimeMs = Date.now() - parseStart;
+                const { transactions: rawTransactions, warnings, totalRowsInFile } = parseResult;
+
+                controller.enqueue(encoder.encode(sseEvent({
+                    phase: "parsed",
+                    totalRows: totalRowsInFile,
+                    parsedCount: rawTransactions.length,
+                    warnings: warnings.length > 0 ? warnings.slice(0, 10) : undefined,
+                })));
+
+                // ── PHASE 2: Chunked AI categorization ──
+                await dbConnect();
+
+                const portfolioContext = await buildPortfolioContext();
+
+                const categoryCount = await Category.countDocuments();
+                if (categoryCount === 0) {
+                    await Category.insertMany(DEFAULT_CATEGORIES.map(name => ({ name })));
+                }
+                const categories = await Category.find().lean();
+                const categoryNames = categories.map((c: any) => c.name);
+
+                const categorizeStart = Date.now();
+
+                const categorizationResult = await categorizeInChunks(
+                    rawTransactions,
+                    model,
+                    categoryNames,
+                    portfolioContext,
+                    (progress) => {
+                        controller.enqueue(encoder.encode(sseEvent(progress)));
+                    },
+                );
+
+                const categorizeTimeMs = Date.now() - categorizeStart;
+
+                // ── PHASE 3: Historical enrichment ──
+                controller.enqueue(encoder.encode(sseEvent({ phase: "enriching", message: "Enriching with historical data..." })));
+
+                const enrichedTransactions = await Promise.all(
+                    categorizationResult.transactions.map(async (tx) => {
+                        if (!tx.linkedAssetId) {
+                            const historicalTx = await Transaction.findOne({
+                                description: tx.description,
+                                category: { $ne: "UNCATEGORIZED" },
+                            }).sort({ date: -1, createdAt: -1 });
+
+                            if (historicalTx) {
+                                return {
+                                    ...tx,
+                                    category: historicalTx.category || tx.category,
+                                    linkedAssetId: historicalTx.linkedAssetId?.toString() || tx.linkedAssetId,
+                                    tags: historicalTx.tags?.length ? historicalTx.tags : [],
+                                    confirmed: false,
+                                };
+                            }
+                        }
+
+                        return { ...tx, tags: [], confirmed: false };
+                    })
+                );
+
+                // ── PHASE 4: Create IngestionBatch ──
+                const batch = await IngestionBatch.create({
+                    fileName: file.name,
+                    transactions: enrichedTransactions,
+                    suggestedCategories: categorizationResult.suggestedNewCategories,
+                    totalCount: enrichedTransactions.length,
+                    confirmedCount: 0,
+                    status: "in_review",
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                    processingStats: {
+                        parseTimeMs,
+                        categorizeTimeMs,
+                        totalChunks: categorizationResult.stats.totalChunks,
+                        retriedChunks: categorizationResult.stats.retriedChunks,
+                        fallbackChunks: categorizationResult.stats.fallbackChunks,
+                    },
+                });
+
+                controller.enqueue(encoder.encode(sseEvent({
+                    phase: "complete",
+                    batchId: batch._id,
+                    totalCount: batch.totalCount,
+                    stats: {
+                        parseTimeMs,
+                        categorizeTimeMs,
+                        ...categorizationResult.stats,
+                    },
+                })));
+
+                controller.close();
+            } catch (error: any) {
+                console.error("AI Ingestion Error:", error);
+                controller.enqueue(encoder.encode(sseEvent({
+                    phase: "error",
+                    message: error.message || "Error al analizar el documento.",
+                })));
+                controller.close();
+            }
+        },
+    });
+
+    return new Response(stream, {
+        headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    });
+}
+
 export async function POST(req: Request) {
     try {
         const formData = await req.formData();
@@ -133,104 +318,14 @@ export async function POST(req: Request) {
         }
 
         const model = await getAiModel();
-
-        // Convert file to base64 for vision models
         const buffer = Buffer.from(await file.arrayBuffer());
-        const base64Content = buffer.toString('base64');
         const mimeType = file.type;
 
-        let messages: any[];
-
-        if (mimeType === 'text/csv' || mimeType.includes('text/')) {
-            const textContent = buffer.toString('utf8');
-            messages = [
-                {
-                    role: 'user',
-                    content: [
-                        { type: "text", text: `Please extract data from the following document:\n\n${textContent}` }
-                    ]
-                }
-            ];
-        } else {
-            messages = [
-                {
-                    role: 'user',
-                    content: [
-                        { type: "text", text: "Please extract structured data from this document based on the required schema." },
-                        {
-                            type: "image",
-                            image: `data:${mimeType};base64,${base64Content}`
-                        }
-                    ]
-                }
-            ];
-        }
-
-        const schema = type === 'statement' ? bankStatementSchema : loanDocumentSchema;
-
-        let systemPrompt: string;
-        if (type === 'statement') {
-            const portfolioContext = await buildPortfolioContext();
-            systemPrompt = "You are an expert financial assistant. Analyze this bank statement and extract a structured list of transactions. Ensure amounts use the correct negative/positive sign."
-                + (portfolioContext
-                    ? "\n\nWhen a transaction clearly corresponds to one of the user's assets, set linkedAssetId to the asset's exact ID from the list below. Match by: keywords appearing in the transaction description, rent income matching a tenant's monthlyRent, or mortgage/loan payments matching a loan's monthly payment. Keywords are the strongest signal — if a transaction description contains an asset's keyword, link it to that asset."
-                    + portfolioContext
-                    : "");
-        } else {
-            systemPrompt = "You are an expert loan officer. You are scanning a loan or mortgage statement. ALWAYS focus on extracting the ORIGINATION details of the loan (capital originalmente concedido, plazo total en meses, fecha de firma original) rather than the point-in-time current balance. Extrae cuidadosamente todas las penalizaciones y comisiones asociadas descritas en las condiciones.";
-        }
-
-        // @ts-ignore - The `ai` SDK handles image parts differently depending on version. We'll pass the content safely.
-        const { object } = await generateObject({
-            model: model,
-            schema: schema,
-            system: systemPrompt,
-            messages: messages,
-        });
-
-        // For loan documents, return directly (no batch needed)
         if (type === 'loan') {
-            return NextResponse.json(object);
+            return handleLoanDocument(buffer, mimeType, model);
         }
 
-        // For statements: enrich with historical data and create batch
-        const aiTransactions = (object as any).transactions || [];
-
-        const enrichedTransactions = await Promise.all(
-            aiTransactions.map(async (tx: any) => {
-                // Historical lookup for transactions the AI didn't link to an asset
-                if (!tx.linkedAssetId) {
-                    const historicalTx = await Transaction.findOne({
-                        description: tx.description,
-                        category: { $ne: "UNCATEGORIZED" },
-                    }).sort({ date: -1, createdAt: -1 });
-
-                    if (historicalTx) {
-                        return {
-                            ...tx,
-                            category: historicalTx.category || tx.category,
-                            linkedAssetId: historicalTx.linkedAssetId?.toString() || tx.linkedAssetId,
-                            tags: historicalTx.tags?.length ? historicalTx.tags : [],
-                            confirmed: false,
-                        };
-                    }
-                }
-
-                return { ...tx, tags: [], confirmed: false };
-            })
-        );
-
-        // Create IngestionBatch for paginated review
-        const batch = await IngestionBatch.create({
-            fileName: file.name,
-            transactions: enrichedTransactions,
-            totalCount: enrichedTransactions.length,
-            confirmedCount: 0,
-            status: "in_review",
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        });
-
-        return NextResponse.json({ batchId: batch._id, totalCount: batch.totalCount });
+        return handleStatement(file, buffer, mimeType, model);
 
     } catch (error: any) {
         console.error("AI Ingestion Error:", error);
