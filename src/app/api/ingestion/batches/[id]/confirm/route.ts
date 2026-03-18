@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/mongodb";
 import IngestionBatch from "@/models/IngestionBatch";
 import Transaction from "@/models/Transaction";
@@ -18,12 +19,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         const transactionsToInsert = transactions.map((tx: any) => ({
             date: tx.date,
             description: tx.description,
+            friendlyDescription: tx.friendlyDescription || undefined,
             amount: tx.amount,
             category: tx.category,
             tags: tx.tags || [],
             linkedAssetId: tx.linkedAssetId || undefined,
             linkedProjectId: tx.linkedProjectId || undefined,
-            batchId: id,
+            batchId: new mongoose.Types.ObjectId(id),
             status: "confirmed",
             source: "csv_import",
             processingTime: "Just now",
@@ -38,6 +40,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             if (batchIdx < batch.transactions.length) {
                 batch.transactions[batchIdx].confirmed = true;
                 batch.transactions[batchIdx].category = transactions[i].category;
+                batch.transactions[batchIdx].friendlyDescription = transactions[i].friendlyDescription;
                 batch.transactions[batchIdx].linkedAssetId = transactions[i].linkedAssetId;
                 batch.transactions[batchIdx].linkedProjectId = transactions[i].linkedProjectId;
             }

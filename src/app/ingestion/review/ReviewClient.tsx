@@ -13,6 +13,7 @@ const PAGE_SIZE = 20;
 
 interface CorrectionEntry {
     category?: string;
+    friendlyDescription?: string;
     linkedAssetId?: string;
     linkedProjectId?: string;
 }
@@ -66,6 +67,7 @@ export default function ReviewClient() {
                 return {
                     ...tx,
                     category: correction.category || tx.category,
+                    friendlyDescription: correction.friendlyDescription ?? tx.friendlyDescription,
                     linkedAssetId: correction.linkedAssetId ?? tx.linkedAssetId,
                     linkedProjectId: correction.linkedProjectId ?? tx.linkedProjectId,
                 };
@@ -87,12 +89,13 @@ export default function ReviewClient() {
                 [key]: {
                     ...prev[key],
                     ...(field === "category" ? { category: value } : {}),
+                    ...(field === "friendlyDescription" ? { friendlyDescription: value } : {}),
                     ...(field === "linkedAssetId" ? { linkedAssetId: value } : {}),
                     ...(field === "linkedProjectId" ? { linkedProjectId: value } : {}),
                 },
             }));
 
-            if (field === "category" || field === "linkedAssetId" || field === "linkedProjectId") {
+            if (field === "category" || field === "linkedAssetId" || field === "linkedProjectId" || field === "friendlyDescription") {
                 for (let i = 0; i < updated.length; i++) {
                     if (i !== index && normalizeDescription(updated[i].description) === key) {
                         updated[i] = { ...updated[i], [field]: value };
@@ -155,23 +158,29 @@ export default function ReviewClient() {
         }
     };
 
+    const [isConfirmingAll, setIsConfirmingAll] = useState(false);
+
     const handleConfirmAll = async () => {
-        if (!batchId || !confirm(`¿Aceptar y guardar las ${batch?.totalCount} transacciones del lote?`)) return;
-        setIsSaving(true);
+        if (!batchId) return;
+        setIsConfirmingAll(true);
 
         try {
             const res = await fetch(`/api/ingestion/batches/${batchId}/confirm-all`, {
                 method: "PUT",
+                headers: { "Content-Type": "application/json" },
             });
 
-            if (!res.ok) throw new Error("Failed to confirm all");
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Failed to confirm all");
+            }
 
             router.push("/ingestion");
-        } catch (error) {
-            console.error(error);
-            alert("Error al guardar el lote completo.");
+        } catch (error: any) {
+            console.error("Confirm all error:", error);
+            alert(`Error al guardar el lote: ${error.message}`);
         } finally {
-            setIsSaving(false);
+            setIsConfirmingAll(false);
         }
     };
 
@@ -240,11 +249,11 @@ export default function ReviewClient() {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleConfirmAll}
-                        disabled={isSaving}
+                        disabled={isConfirmingAll}
                         className="text-sm font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors disabled:opacity-50 flex items-center gap-1.5"
                     >
-                        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                        Aceptar y guardar lote
+                        {isConfirmingAll ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                        {isConfirmingAll ? "Guardando..." : "Aceptar y guardar lote"}
                     </button>
                     <button
                         onClick={handleDiscard}
@@ -320,7 +329,8 @@ export default function ReviewClient() {
                         <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 tracking-wider sticky top-0 z-10 shadow-sm shadow-slate-200/50">
                             <tr>
                                 <th className="px-5 py-3 border-b border-slate-200 w-24">Fecha</th>
-                                <th className="px-5 py-3 border-b border-slate-200 min-w-[200px]">Concepto</th>
+                                <th className="px-5 py-3 border-b border-slate-200 min-w-[200px]">Concepto original</th>
+                                <th className="px-5 py-3 border-b border-slate-200 min-w-[160px]">Desc. amigable</th>
                                 <th className="px-5 py-3 border-b border-slate-200 w-32 text-right">Importe</th>
                                 <th className="px-5 py-3 border-b border-slate-200 min-w-[150px]">Categoría</th>
                                 <th className="px-5 py-3 border-b border-slate-200 min-w-[150px]">Vincular Activo/Proyecto</th>
@@ -340,6 +350,15 @@ export default function ReviewClient() {
                                                 value={tx.description}
                                                 onChange={(e) => handleTxChange(idx, "description", e.target.value)}
                                                 className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:ring-0 p-1 font-bold text-slate-900 transition-colors"
+                                            />
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <input
+                                                type="text"
+                                                value={tx.friendlyDescription || ""}
+                                                onChange={(e) => handleTxChange(idx, "friendlyDescription", e.target.value)}
+                                                placeholder="—"
+                                                className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:ring-0 p-1 text-sm text-indigo-700 transition-colors"
                                             />
                                         </td>
                                         <td className="px-5 py-3 text-right font-mono font-bold">

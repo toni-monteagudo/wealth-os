@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2, SplitSquareHorizontal, Package, Trash2, Eye, Loader2, Tag, Plus, X } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
-import { ITransaction, IIngestionBatch, ICategory } from "@/types";
+import { ITransaction, IIngestionBatch, ICategory, ITransactionStats } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -15,6 +15,7 @@ import { ConfirmDeleteModal } from "@/components/ui/ConfirmDeleteModal";
 export default function IngestionPage() {
     const router = useRouter();
     const { data: txs, loading, mutate } = useApi<ITransaction[]>("/api/transactions");
+    const { data: stats, mutate: mutateStats } = useApi<ITransactionStats>("/api/transactions/stats");
     const { data: batches, mutate: mutateBatches } = useApi<IIngestionBatch[]>("/api/ingestion/batches");
     const { data: categories, mutate: mutateCategories } = useApi<ICategory[]>("/api/categories");
     const { t } = useI18n();
@@ -38,9 +39,9 @@ export default function IngestionPage() {
         message?: string;
     } | null>(null);
 
-    const needsReviewCount = txs?.filter(t => t.status === "needs_review").length || 0;
-    const confirmedCount = txs?.filter(t => t.status === "confirmed").length || 0;
-    const total = txs?.length || 0;
+    const needsReviewCount = stats?.needsReviewCount || 0;
+    const confirmedCount = stats?.confirmedCount || 0;
+    const total = stats?.total || 0;
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "statement" | "loan") => {
         const file = e.target.files?.[0];
@@ -139,6 +140,7 @@ export default function IngestionPage() {
             if (res.ok) {
                 mutateBatches();
                 mutate();
+                mutateStats();
             }
         } catch (e) {
             console.error(e);
@@ -175,6 +177,7 @@ export default function IngestionPage() {
         const res = await fetch("/api/ingestion/purge", { method: "DELETE" });
         if (res.ok) {
             mutate();
+            mutateStats();
             mutateBatches();
             setIsPurgeModalOpen(false);
         }
@@ -183,6 +186,7 @@ export default function IngestionPage() {
     const confirmTx = async (id: string) => {
         await fetch(`/api/transactions/${id}/confirm`, { method: "PUT" });
         mutate();
+        mutateStats();
     };
 
     const formatCurrency = (num: number) => {
@@ -202,6 +206,19 @@ export default function IngestionPage() {
 
     const completedBatches = batches?.filter(b => b.status === "completed") || [];
     const pendingBatches = batches?.filter(b => b.status === "in_review") || [];
+
+    const getBatchDateRange = (batch: IIngestionBatch) => {
+        if (!batch.transactions?.length) return null;
+        const dates = batch.transactions.map(t => t.date).filter(Boolean).sort();
+        if (dates.length === 0) return null;
+        return { from: dates[0], to: dates[dates.length - 1] };
+    };
+
+    const formatShortDate = (dateStr: string) => {
+        try {
+            return new Date(dateStr).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" });
+        } catch { return dateStr; }
+    };
 
     return (
         <main className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full flex flex-col gap-6">
@@ -341,34 +358,42 @@ export default function IngestionPage() {
                             <p className="text-xs text-slate-400 text-center py-4">Sin importaciones completadas.</p>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                {completedBatches.map(batch => (
-                                    <div key={batch._id} className="group flex items-center justify-between bg-slate-50 hover:bg-slate-100 rounded-lg px-3 py-2.5 transition-colors">
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-bold text-slate-800 truncate">{batch.fileName || "Extracto"}</p>
-                                            <p className="text-[10px] text-slate-400">{formatDate(batch.createdAt)} — {batch.totalCount} txs</p>
+                                {completedBatches.map(batch => {
+                                    const dateRange = getBatchDateRange(batch);
+                                    return (
+                                        <div key={batch._id} className="group flex items-center justify-between bg-slate-50 hover:bg-slate-100 rounded-lg px-3 py-2.5 transition-colors">
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-slate-800 truncate">{batch.fileName || "Extracto"}</p>
+                                                <p className="text-[10px] text-slate-400">{formatDate(batch.createdAt)} — {batch.totalCount} txs</p>
+                                                {dateRange && (
+                                                    <p className="text-[10px] text-slate-400">
+                                                        {formatShortDate(dateRange.from)} → {formatShortDate(dateRange.to)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => router.push(`/ingestion/review?batchId=${batch._id}&page=1`)}
+                                                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                                    title="Ver detalle"
+                                                >
+                                                    <Eye size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteBatch(batch._id!)}
+                                                    disabled={deletingBatchId === batch._id}
+                                                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-50"
+                                                    title="Eliminar lote y transacciones"
+                                                >
+                                                    {deletingBatchId === batch._id
+                                                        ? <Loader2 size={14} className="animate-spin" />
+                                                        : <Trash2 size={14} />
+                                                    }
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => router.push(`/ingestion/review?batchId=${batch._id}&page=1`)}
-                                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                                                title="Ver detalle"
-                                            >
-                                                <Eye size={14} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteBatch(batch._id!)}
-                                                disabled={deletingBatchId === batch._id}
-                                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-50"
-                                                title="Eliminar lote y transacciones"
-                                            >
-                                                {deletingBatchId === batch._id
-                                                    ? <Loader2 size={14} className="animate-spin" />
-                                                    : <Trash2 size={14} />
-                                                }
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -460,9 +485,14 @@ export default function IngestionPage() {
                                     ) : txs?.map((tx: ITransaction) => (
                                         <tr key={tx._id} className={`hover:bg-slate-50/50 transition-colors ${tx.status === 'needs_review' ? 'bg-amber-50/10' : ''}`}>
                                             <td className="px-6 py-4 text-slate-500 font-medium">{tx.date}</td>
-                                            <td className="px-6 py-4 font-bold text-slate-900">
-                                                {tx.description}
-                                                {tx.status === 'needs_review' && <span className="ml-2 inline-flex items-center text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded font-bold uppercase"><AlertCircle size={10} className="mr-0.5" /> REVISAR</span>}
+                                            <td className="px-6 py-4">
+                                                <p className="font-bold text-slate-900">
+                                                    {tx.friendlyDescription || tx.description}
+                                                    {tx.status === 'needs_review' && <span className="ml-2 inline-flex items-center text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded font-bold uppercase"><AlertCircle size={10} className="mr-0.5" /> REVISAR</span>}
+                                                </p>
+                                                {tx.friendlyDescription && tx.friendlyDescription !== tx.description && (
+                                                    <p className="text-[11px] text-slate-400 truncate max-w-[300px]" title={tx.description}>{tx.description}</p>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-1">

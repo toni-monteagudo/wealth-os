@@ -241,6 +241,7 @@ async function handleStatement(file: File, buffer: Buffer, mimeType: string, mod
                             if (historicalTx) {
                                 return {
                                     ...tx,
+                                    friendlyDescription: tx.friendlyDescription || historicalTx.friendlyDescription,
                                     category: historicalTx.category || tx.category,
                                     linkedAssetId: historicalTx.linkedAssetId?.toString() || tx.linkedAssetId,
                                     tags: historicalTx.tags?.length ? historicalTx.tags : [],
@@ -249,7 +250,7 @@ async function handleStatement(file: File, buffer: Buffer, mimeType: string, mod
                             }
                         }
 
-                        return { ...tx, tags: [], confirmed: false };
+                        return { ...tx, friendlyDescription: tx.friendlyDescription, tags: [], confirmed: false };
                     })
                 );
 

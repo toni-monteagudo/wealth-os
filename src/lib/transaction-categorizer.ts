@@ -8,6 +8,7 @@ const chunkCategorizationSchema = z.object({
     transactions: z.array(z.object({
         index: z.number().describe("The original index of the transaction from the input list (0-based)"),
         category: z.string().describe("Category for this transaction. MUST be one of the provided categories. Use OTROS if none fits."),
+        friendlyDescription: z.string().describe("A short, clean, human-friendly description of this transaction. Simplify cryptic bank codes into readable text. E.g. '0057950 FACEBOOK IRELAND LTD' → 'Facebook Ads', 'BIZUM ENVI A JUAN PEREZ' → 'Bizum a Juan Pérez', 'RECIBO LUZ IBERDROLA' → 'Recibo Iberdrola (luz)'. Keep the original meaning, just make it readable."),
         linkedAssetId: z.string().optional().describe("ID of the linked asset if the transaction clearly corresponds to one. Use the exact ID from the portfolio list."),
     })),
     suggestedNewCategories: z.array(z.string()).optional().describe("New category suggestions not in the existing list. Uppercase, no accents (e.g. FARMACIA, MASCOTAS). Only suggest if truly needed."),
@@ -31,6 +32,7 @@ export interface CategorizationStats {
 export interface CategorizedTransaction {
     date: string;
     description: string;
+    friendlyDescription?: string;
     amount: number;
     category: string;
     linkedAssetId?: string;
@@ -79,8 +81,8 @@ async function categorizeChunk(
     model: any,
     categoryNames: string[],
     portfolioContext: string,
-): Promise<{ categorized: Map<number, { category: string; linkedAssetId?: string }>; suggested: string[]; retried: boolean; fallback: boolean }> {
-    const systemPrompt = `You are a financial transaction categorizer. For each transaction, assign a category and optionally link to a portfolio asset. Return EXACTLY ${chunk.length} results, one per input transaction, preserving the index field.`;
+): Promise<{ categorized: Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>; suggested: string[]; retried: boolean; fallback: boolean }> {
+    const systemPrompt = `You are a financial transaction categorizer. For each transaction, assign a category, generate a short human-friendly description, and optionally link to a portfolio asset. Return EXACTLY ${chunk.length} results, one per input transaction, preserving the index field.`;
 
     let retried = false;
     let fallback = false;
@@ -97,9 +99,9 @@ async function categorizeChunk(
                 }],
             });
 
-            const resultMap = new Map<number, { category: string; linkedAssetId?: string }>();
+            const resultMap = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>();
             for (const t of object.transactions) {
-                resultMap.set(t.index, { category: t.category, linkedAssetId: t.linkedAssetId });
+                resultMap.set(t.index, { category: t.category, friendlyDescription: t.friendlyDescription, linkedAssetId: t.linkedAssetId });
             }
 
             if (resultMap.size === chunk.length) {
@@ -140,7 +142,7 @@ async function categorizeChunk(
             }
 
             // Persistent failure — fallback entire chunk
-            const resultMap = new Map<number, { category: string; linkedAssetId?: string }>();
+            const resultMap = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>();
             for (const c of chunk) {
                 resultMap.set(c.index, { category: "OTROS" });
             }
@@ -171,7 +173,7 @@ export async function categorizeInChunks(
         chunks.push(indexed.slice(i, i + chunkSize));
     }
 
-    const allCategorized = new Map<number, { category: string; linkedAssetId?: string }>();
+    const allCategorized = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>();
     const allSuggested = new Set<string>();
     const stats: CategorizationStats = {
         totalChunks: chunks.length,
@@ -211,6 +213,7 @@ export async function categorizeInChunks(
         return {
             date: tx.date,
             description: tx.description,
+            friendlyDescription: cat.friendlyDescription,
             amount: tx.amount,
             category: cat.category,
             linkedAssetId: cat.linkedAssetId,

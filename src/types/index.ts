@@ -87,6 +87,7 @@ export interface ITransaction {
     _id?: string;
     date: string;
     description: string;
+    friendlyDescription?: string;
     amount: number;
     category: string;
     tags: string[];
@@ -150,6 +151,26 @@ export interface IDocument {
     url?: string;
 }
 
+// Transaction Stats (server-side aggregation)
+export interface ITransactionStats {
+    total: number;
+    needsReviewCount: number;
+    confirmedCount: number;
+    totalIncome: number;
+    totalExpenses: number;
+    netBalance: number;
+}
+
+export interface IPaginatedResponse<T> {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
 // Computed KPIs
 export interface IKPIs {
     netWorth: number;
@@ -188,6 +209,7 @@ export type IngestionBatchStatus = "in_review" | "completed";
 export interface IStagedTransaction {
     date: string;
     description: string;
+    friendlyDescription?: string;
     amount: number;
     category: string;
     linkedAssetId?: string;

@@ -7,6 +7,7 @@ const StagedTransactionSchema = new Schema(
     {
         date: { type: String, required: true },
         description: { type: String, required: true },
+        friendlyDescription: { type: String },
         amount: { type: Number, required: true },
         category: { type: String, required: true },
         linkedAssetId: { type: String },

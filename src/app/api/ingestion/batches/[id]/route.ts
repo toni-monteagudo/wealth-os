@@ -32,9 +32,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
             return NextResponse.json({ error: "Batch not found" }, { status: 404 });
         }
 
-        // Explicitly cast to ObjectId to ensure the query matches stored ObjectId values
+        // Match both ObjectId and string values for backwards compatibility
         const objectId = new mongoose.Types.ObjectId(id);
-        const deleteResult = await Transaction.deleteMany({ batchId: objectId });
+        const deleteResult = await Transaction.deleteMany({
+            $or: [{ batchId: objectId }, { batchId: id }],
+        });
 
         // Delete the batch itself
         await IngestionBatch.findByIdAndDelete(id);

@@ -7,6 +7,7 @@ const TransactionSchema = new Schema<TransactionDocument>(
     {
         date: { type: String, required: true },
         description: { type: String, required: true },
+        friendlyDescription: { type: String },
         amount: { type: Number, required: true },
         category: { type: String, required: true },
         tags: [{ type: String }],
