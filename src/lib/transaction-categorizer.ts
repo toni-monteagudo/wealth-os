@@ -7,7 +7,7 @@ const CHUNK_SIZE = 50;
 const chunkCategorizationSchema = z.object({
     transactions: z.array(z.object({
         index: z.number().describe("The original index of the transaction from the input list (0-based)"),
-        category: z.string().describe("Category for this transaction. MUST be one of the provided categories. Use OTROS if none fits."),
+        category: z.string().describe("Category for this transaction. Use one of the provided categories when possible. If none fits well, assign a new descriptive category name (uppercase, no accents, e.g. FARMACIA, MASCOTAS) and also add it to suggestedNewCategories."),
         friendlyDescription: z.string().describe("A short, clean, human-friendly description of this transaction. Simplify cryptic bank codes into readable text. E.g. '0057950 FACEBOOK IRELAND LTD' → 'Facebook Ads', 'BIZUM ENVI A JUAN PEREZ' → 'Bizum a Juan Pérez', 'RECIBO LUZ IBERDROLA' → 'Recibo Iberdrola (luz)'. Keep the original meaning, just make it readable."),
         linkedAssetId: z.string().optional().describe("ID of the linked asset if the transaction clearly corresponds to one. Use the exact ID from the portfolio list."),
     })),
@@ -63,7 +63,10 @@ ${txList}
 
 AVAILABLE CATEGORIES: ${categoryNames.join(", ")}
 
-If no category fits, use OTROS and suggest a new one in suggestedNewCategories.
+CATEGORY RULES:
+- Use an existing category whenever possible.
+- If no existing category fits, assign a NEW category name directly to the transaction (uppercase, no accents, e.g. FARMACIA, MASCOTAS) AND add it to suggestedNewCategories.
+- Do NOT use OTROS when a more specific new category would be better. Only use OTROS as a last resort when no meaningful category can be determined.
 
 FRIENDLY DESCRIPTION RULES:
 For each transaction, generate a short, clean, human-readable "friendlyDescription" from the raw bank description.
