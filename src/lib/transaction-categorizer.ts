@@ -54,7 +54,7 @@ function buildChunkPrompt(
         `  {index: ${t.index}, date: "${t.date}", description: "${t.description}", amount: ${t.amount}}`
     ).join(",\n");
 
-    let prompt = `Categorize these ${chunk.length} bank transactions.
+    let prompt = `Categorize these ${chunk.length} bank transactions and generate a friendly description for each one.
 
 TRANSACTIONS TO CATEGORIZE:
 [
@@ -63,7 +63,20 @@ ${txList}
 
 AVAILABLE CATEGORIES: ${categoryNames.join(", ")}
 
-If no category fits, use OTROS and suggest a new one in suggestedNewCategories.`;
+If no category fits, use OTROS and suggest a new one in suggestedNewCategories.
+
+FRIENDLY DESCRIPTION RULES:
+For each transaction, generate a short, clean, human-readable "friendlyDescription" from the raw bank description.
+- Remove numeric codes, reference numbers, and internal bank identifiers
+- Keep merchant/company names and the core purpose
+- Examples:
+  "0057950 FACEBOOK IRELAND LTD" → "Facebook Ads"
+  "BIZUM ENVIADO A GARCIA LOPEZ JUAN" → "Bizum a Juan García López"
+  "RECIBO LUZ ENDESA ENERGIA SA" → "Recibo Endesa (luz)"
+  "TRANSFERENCIA SEPA DE EMPRESA SL NOMINA" → "Nómina Empresa SL"
+  "PAGO TARJ. 4532****1234 MERCADONA" → "Mercadona"
+  "COMISION MANTENIMIENTO CUENTA" → "Comisión mantenimiento cuenta"
+- The friendlyDescription MUST NOT be empty. If the description is already clean, use it as-is.`;
 
     if (portfolioContext) {
         prompt += `\n\nWhen a transaction clearly corresponds to a portfolio asset, set linkedAssetId. Match by: keywords in description, rent income matching tenant monthlyRent, or loan payments matching monthly payment.${portfolioContext}`;
