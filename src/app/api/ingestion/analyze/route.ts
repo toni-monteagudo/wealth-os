@@ -145,7 +145,7 @@ async function handleLoanDocument(buffer: Buffer, mimeType: string, model: any):
 }
 
 // ── STATEMENT HANDLER (new chunked pipeline with SSE) ──
-async function handleStatement(file: File, buffer: Buffer, mimeType: string, model: any): Promise<Response> {
+async function handleStatement(file: File, buffer: Buffer, mimeType: string, model: any, userContext: string = ""): Promise<Response> {
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -215,11 +215,15 @@ async function handleStatement(file: File, buffer: Buffer, mimeType: string, mod
 
                 const categorizeStart = Date.now();
 
+                const fullContext = userContext
+                    ? `${portfolioContext}\n\nCONTEXTO DEL USUARIO:\n${userContext}`
+                    : portfolioContext;
+
                 const categorizationResult = await categorizeInChunks(
                     rawTransactions,
                     model,
                     categoryNames,
-                    portfolioContext,
+                    fullContext,
                     (progress) => {
                         controller.enqueue(encoder.encode(sseEvent(progress)));
                     },
@@ -309,6 +313,7 @@ export async function POST(req: Request) {
         const formData = await req.formData();
         const file = formData.get("file") as File;
         const type = formData.get("type") as "statement" | "loan";
+        const userContext = (formData.get("userContext") as string) || "";
 
         if (!file) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -326,7 +331,7 @@ export async function POST(req: Request) {
             return handleLoanDocument(buffer, mimeType, model);
         }
 
-        return handleStatement(file, buffer, mimeType, model);
+        return handleStatement(file, buffer, mimeType, model, userContext);
 
     } catch (error: any) {
         console.error("AI Ingestion Error:", error);

@@ -28,6 +28,10 @@ export default function IngestionPage() {
     // AI Validation States
     const [loanDataToValidate, setLoanDataToValidate] = useState<any>(null);
 
+    // Pre-upload context modal
+    const [pendingFile, setPendingFile] = useState<{ file: File; type: "statement" | "loan" } | null>(null);
+    const [userContext, setUserContext] = useState("");
+
     // SSE upload progress for statements
     const [uploadProgress, setUploadProgress] = useState<{
         phase: string;
@@ -43,15 +47,27 @@ export default function IngestionPage() {
     const confirmedCount = stats?.confirmedCount || 0;
     const total = stats?.total || 0;
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "statement" | "loan") => {
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "statement" | "loan") => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setPendingFile({ file, type });
+        setUserContext("");
+        e.target.value = '';
+    };
+
+    const handleConfirmUpload = async () => {
+        if (!pendingFile) return;
+        const { file, type } = pendingFile;
+        setPendingFile(null);
 
         setIsUploading(true);
         setUploadProgress(null);
         const formData = new FormData();
         formData.append("file", file);
         formData.append("type", type);
+        if (userContext.trim()) {
+            formData.append("userContext", userContext.trim());
+        }
 
         try {
             const res = await fetch("/api/ingestion/analyze", {
@@ -113,7 +129,6 @@ export default function IngestionPage() {
         } finally {
             setIsUploading(false);
             setUploadProgress(null);
-            e.target.value = '';
         }
     };
 
@@ -235,11 +250,11 @@ export default function IngestionPage() {
                 <div className="flex gap-3">
                     <label className="cursor-pointer bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center gap-2">
                         <FileSpreadsheet size={18} /> Subir Préstamo (PDF/Img)
-                        <input type="file" className="hidden" accept=".pdf, image/*" onChange={(e) => handleFileUpload(e, "loan")} />
+                        <input type="file" className="hidden" accept=".pdf, image/*" onChange={(e) => handleFileSelect(e, "loan")} />
                     </label>
                     <label className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors flex items-center gap-2">
                         <FileSpreadsheet size={18} /> Subir Extractos (CSV/XLS)
-                        <input type="file" className="hidden" accept=".csv, .xls, .xlsx" onChange={(e) => handleFileUpload(e, "statement")} />
+                        <input type="file" className="hidden" accept=".csv, .xls, .xlsx" onChange={(e) => handleFileSelect(e, "statement")} />
                     </label>
                 </div>
             </div>
@@ -252,6 +267,47 @@ export default function IngestionPage() {
                         onValidate={handleLoanValidate}
                         onCancel={() => setLoanDataToValidate(null)}
                     />
+                </div>
+            )}
+
+            {/* Pre-upload context modal */}
+            {pendingFile && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">Preparar importación</h3>
+                        <p className="text-sm text-slate-500 mb-4">
+                            Archivo: <span className="font-medium text-slate-700">{pendingFile.file.name}</span>
+                        </p>
+
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                            Contexto adicional para la IA (opcional)
+                        </label>
+                        <textarea
+                            value={userContext}
+                            onChange={(e) => setUserContext(e.target.value)}
+                            rows={4}
+                            placeholder="Ej: Las transacciones de Stripe son ingresos de mi SaaS. Los Bizum a María son alquiler del piso de Valencia. ENDESA es el suministro del local comercial..."
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"
+                        />
+                        <p className="text-[11px] text-slate-400 mt-1.5 mb-5">
+                            Cualquier detalle que ayude a la IA a categorizar mejor: qué empresa genera los ingresos, a qué corresponden pagos recurrentes, etc.
+                        </p>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setPendingFile(null)}
+                                className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmUpload}
+                                className="btn-accent px-6 py-2 shadow-md shadow-emerald-500/20"
+                            >
+                                Procesar con IA
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
