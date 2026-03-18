@@ -33,4 +33,8 @@ const ProjectSchema = new Schema<ProjectDocument>(
     { timestamps: true }
 );
 
-export default mongoose.models.Project || mongoose.model<ProjectDocument>("Project", ProjectSchema);
+if (mongoose.models.Project) {
+    mongoose.deleteModel("Project");
+}
+
+export default mongoose.model<ProjectDocument>("Project", ProjectSchema);

@@ -42,4 +42,9 @@ const IngestionBatchSchema = new Schema<IngestionBatchDocument>(
 // Auto-delete abandoned in_review batches (expiresAt is set on creation, cleared on completion)
 IngestionBatchSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export default mongoose.models.IngestionBatch || mongoose.model<IngestionBatchDocument>("IngestionBatch", IngestionBatchSchema);
+// Force model recompilation in development to pick up schema changes
+if (mongoose.models.IngestionBatch) {
+    mongoose.deleteModel("IngestionBatch");
+}
+
+export default mongoose.model<IngestionBatchDocument>("IngestionBatch", IngestionBatchSchema);

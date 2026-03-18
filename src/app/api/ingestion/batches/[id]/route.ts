@@ -36,7 +36,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         const objectId = new mongoose.Types.ObjectId(id);
         const deleteResult = await Transaction.deleteMany({
             $or: [{ batchId: objectId }, { batchId: id }],
-        });
+        } as any);
 
         // Delete the batch itself
         await IngestionBatch.findByIdAndDelete(id);

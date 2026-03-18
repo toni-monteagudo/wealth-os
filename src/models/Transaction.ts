@@ -27,4 +27,9 @@ const TransactionSchema = new Schema<TransactionDocument>(
     { timestamps: true }
 );
 
-export default mongoose.models.Transaction || mongoose.model<TransactionDocument>("Transaction", TransactionSchema);
+// Force model recompilation in development to pick up schema changes
+if (mongoose.models.Transaction) {
+    mongoose.deleteModel("Transaction");
+}
+
+export default mongoose.model<TransactionDocument>("Transaction", TransactionSchema);

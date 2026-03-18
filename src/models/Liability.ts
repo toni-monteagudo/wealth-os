@@ -26,4 +26,8 @@ const LiabilitySchema = new Schema<LiabilityDocument>(
     { timestamps: true }
 );
 
-export default mongoose.models.Liability || mongoose.model<LiabilityDocument>("Liability", LiabilitySchema);
+if (mongoose.models.Liability) {
+    mongoose.deleteModel("Liability");
+}
+
+export default mongoose.model<LiabilityDocument>("Liability", LiabilitySchema);

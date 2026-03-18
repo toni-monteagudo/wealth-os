@@ -54,4 +54,8 @@ const AssetSchema = new Schema<AssetDocument>(
     { timestamps: true }
 );
 
-export default mongoose.models.Asset || mongoose.model<AssetDocument>("Asset", AssetSchema);
+if (mongoose.models.Asset) {
+    mongoose.deleteModel("Asset");
+}
+
+export default mongoose.model<AssetDocument>("Asset", AssetSchema);

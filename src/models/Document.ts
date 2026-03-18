@@ -17,4 +17,8 @@ const DocumentSchema = new Schema<DocumentSchemaType>(
     { timestamps: true }
 );
 
-export default mongoose.models.Document || mongoose.model<DocumentSchemaType>("Document", DocumentSchema);
+if (mongoose.models.Document) {
+    mongoose.deleteModel("Document");
+}
+
+export default mongoose.model<DocumentSchemaType>("Document", DocumentSchema);
