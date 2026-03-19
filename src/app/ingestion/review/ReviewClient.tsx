@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, Loader2, Plus, X, Trash2, RotateCcw, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { useApi } from "@/hooks/useApi";
@@ -44,6 +44,11 @@ export default function ReviewClient() {
     const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set());
     const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
+    // Pending deletion overrides: batch-index -> true (mark for deletion) | false (restore)
+    // undefined = use the original AI flag from the batch data
+    const [deletionOverrides, setDeletionOverrides] = useState<Map<number, boolean>>(new Map());
+    const [deletionSectionExpanded, setDeletionSectionExpanded] = useState(true);
+
     const totalPages = batch ? Math.ceil(batch.totalCount / PAGE_SIZE) : 0;
     const isLastPage = pageParam >= totalPages;
 
@@ -54,6 +59,59 @@ export default function ReviewClient() {
     const pendingSuggestions = (batch?.suggestedCategories || []).filter(
         s => !acceptedSuggestions.has(s) && !dismissedSuggestions.has(s) && !categoryNames.includes(s)
     );
+
+    // Check if a batch-level transaction is pending deletion
+    const isTxPendingDeletion = useCallback((batchIndex: number): boolean => {
+        const override = deletionOverrides.get(batchIndex);
+        if (override !== undefined) return override;
+        return batch?.transactions[batchIndex]?.pendingDeletion || false;
+    }, [deletionOverrides, batch]);
+
+    // Get deletion reason for a batch-level transaction
+    const getTxDeletionReason = useCallback((batchIndex: number): string => {
+        const override = deletionOverrides.get(batchIndex);
+        if (override === true) return "Marcada manualmente para eliminar";
+        if (override === false) return "";
+        return batch?.transactions[batchIndex]?.deletionReason || "";
+    }, [deletionOverrides, batch]);
+
+    // Count total pending deletions across the entire batch
+    const totalPendingDeletions = useMemo(() => {
+        if (!batch) return 0;
+        let count = 0;
+        for (let i = 0; i < batch.transactions.length; i++) {
+            if (isTxPendingDeletion(i)) count++;
+        }
+        return count;
+    }, [batch, isTxPendingDeletion]);
+
+    // Get the current page's slice with batch indices
+    const pageSliceWithIndices = useMemo(() => {
+        if (!batch?.transactions) return [];
+        const start = pageIndex * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+        return batch.transactions.slice(start, end).map((tx, localIdx) => ({
+            tx,
+            batchIndex: start + localIdx,
+            localIdx,
+        }));
+    }, [batch, pageIndex]);
+
+    // Split current page into active and pending deletion
+    const { activeItems, deletionItems } = useMemo(() => {
+        const active: { tx: IStagedTransaction; batchIndex: number; localIdx: number }[] = [];
+        const deletion: { tx: IStagedTransaction; batchIndex: number; localIdx: number }[] = [];
+
+        for (const item of pageSliceWithIndices) {
+            if (isTxPendingDeletion(item.batchIndex)) {
+                deletion.push(item);
+            } else {
+                active.push(item);
+            }
+        }
+
+        return { activeItems: active, deletionItems: deletion };
+    }, [pageSliceWithIndices, isTxPendingDeletion]);
 
     useEffect(() => {
         if (!batch?.transactions) return;
@@ -107,6 +165,22 @@ export default function ReviewClient() {
         });
     }, []);
 
+    const handleMarkForDeletion = useCallback((batchIndex: number) => {
+        setDeletionOverrides(prev => {
+            const next = new Map(prev);
+            next.set(batchIndex, true);
+            return next;
+        });
+    }, []);
+
+    const handleRestoreFromDeletion = useCallback((batchIndex: number) => {
+        setDeletionOverrides(prev => {
+            const next = new Map(prev);
+            next.set(batchIndex, false);
+            return next;
+        });
+    }, []);
+
     const handleAcceptSuggestion = async (name: string) => {
         try {
             await fetch("/api/categories", {
@@ -130,13 +204,20 @@ export default function ReviewClient() {
         setIsSaving(true);
 
         try {
+            // Send transactions WITH their pendingDeletion status
+            const start = pageIndex * PAGE_SIZE;
+            const txsWithDeletionFlag = pageTransactions.map((tx, localIdx) => ({
+                ...tx,
+                pendingDeletion: isTxPendingDeletion(start + localIdx),
+            }));
+
             const res = await fetch(`/api/ingestion/batches/${batchId}/confirm`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     pageIndex,
                     pageSize: PAGE_SIZE,
-                    transactions: pageTransactions,
+                    transactions: txsWithDeletionFlag,
                 }),
             });
 
@@ -162,12 +243,31 @@ export default function ReviewClient() {
 
     const handleConfirmAll = async () => {
         if (!batchId) return;
+
+        // Build the full deletion map to send to the server
+        const deletionMap: Record<number, boolean> = {};
+        if (batch) {
+            for (let i = 0; i < batch.transactions.length; i++) {
+                if (isTxPendingDeletion(i)) {
+                    deletionMap[i] = true;
+                }
+            }
+        }
+
+        const deletionCount = Object.keys(deletionMap).length;
+        if (deletionCount > 0) {
+            if (!confirm(`Se eliminarán ${deletionCount} transacciones marcadas para borrar y se guardarán las restantes. ¿Continuar?`)) {
+                return;
+            }
+        }
+
         setIsConfirmingAll(true);
 
         try {
             const res = await fetch(`/api/ingestion/batches/${batchId}/confirm-all`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ deletionIndices: deletionMap }),
             });
 
             if (!res.ok) {
@@ -243,7 +343,10 @@ export default function ReviewClient() {
                         {t("ingestion.review_title") !== "ingestion.review_title" ? t("ingestion.review_title") : "Revisar Importación"}
                     </h1>
                     <p className="text-sm font-medium text-slate-500 mt-1">
-                        {batch.totalCount} transacciones detectadas — Revisa la categorización y vincula a activos.
+                        {batch.totalCount} transacciones detectadas
+                        {totalPendingDeletions > 0 && (
+                            <span className="text-amber-600"> — {totalPendingDeletions} marcadas para eliminar</span>
+                        )}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -295,6 +398,82 @@ export default function ReviewClient() {
                 </PremiumCard>
             )}
 
+            {/* Pending Deletion Section */}
+            {deletionItems.length > 0 && (
+                <PremiumCard className="border-amber-200 bg-amber-50/40 !py-0 overflow-hidden">
+                    <button
+                        onClick={() => setDeletionSectionExpanded(prev => !prev)}
+                        className="w-full flex items-center justify-between px-5 py-4"
+                    >
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle size={14} className="text-amber-600" />
+                            <h3 className="text-xs font-bold text-amber-700 uppercase tracking-widest">
+                                Transacciones pendientes de eliminar
+                            </h3>
+                            <span className="text-[10px] font-bold bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
+                                {deletionItems.length} en esta página
+                                {totalPendingDeletions > deletionItems.length && ` · ${totalPendingDeletions} en total`}
+                            </span>
+                        </div>
+                        {deletionSectionExpanded ? <ChevronUp size={16} className="text-amber-600" /> : <ChevronDown size={16} className="text-amber-600" />}
+                    </button>
+
+                    {deletionSectionExpanded && (
+                        <div className="border-t border-amber-200">
+                            <div className="px-5 py-2 text-[10px] font-medium text-amber-600">
+                                Estas transacciones no se guardarán al confirmar. Pulsa restaurar si quieres conservar alguna.
+                            </div>
+                            <table className="w-full text-left text-sm whitespace-nowrap">
+                                <thead className="bg-amber-100/60 text-[10px] uppercase font-bold text-amber-700 tracking-wider">
+                                    <tr>
+                                        <th className="px-5 py-2 border-b border-amber-200 w-24">Fecha</th>
+                                        <th className="px-5 py-2 border-b border-amber-200 min-w-[200px]">Concepto</th>
+                                        <th className="px-5 py-2 border-b border-amber-200 w-32 text-right">Importe</th>
+                                        <th className="px-5 py-2 border-b border-amber-200 min-w-[200px]">Motivo</th>
+                                        <th className="px-5 py-2 border-b border-amber-200 w-24 text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-amber-100 bg-white/50">
+                                    {deletionItems.map(({ tx, batchIndex }) => {
+                                        const displayTx = pageTransactions[batchIndex - pageIndex * PAGE_SIZE] || tx;
+                                        const reason = getTxDeletionReason(batchIndex);
+
+                                        return (
+                                            <tr key={batchIndex} className="hover:bg-amber-50/50 transition-colors">
+                                                <td className="px-5 py-2.5 text-slate-500 font-medium font-mono text-xs">{displayTx.date}</td>
+                                                <td className="px-5 py-2.5">
+                                                    <div className="font-bold text-slate-600 line-through text-xs">{displayTx.description}</div>
+                                                    {displayTx.friendlyDescription && (
+                                                        <div className="text-[11px] text-slate-400 line-through">{displayTx.friendlyDescription}</div>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-2.5 text-right font-mono font-bold text-xs">
+                                                    <span className={displayTx.amount < 0 ? "text-slate-400" : "text-emerald-400"}>
+                                                        {formatCurrency(displayTx.amount)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-2.5 text-xs text-amber-700 font-medium">
+                                                    {reason}
+                                                </td>
+                                                <td className="px-5 py-2.5 text-center">
+                                                    <button
+                                                        onClick={() => handleRestoreFromDeletion(batchIndex)}
+                                                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                        title="Restaurar transacción"
+                                                    >
+                                                        <RotateCcw size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </PremiumCard>
+            )}
+
             {/* Progress bar */}
             <PremiumCard className="!py-4">
                 <div className="flex items-center justify-between mb-2">
@@ -334,101 +513,123 @@ export default function ReviewClient() {
                                 <th className="px-5 py-3 border-b border-slate-200 w-32 text-right">Importe</th>
                                 <th className="px-5 py-3 border-b border-slate-200 min-w-[150px]">Categoría</th>
                                 <th className="px-5 py-3 border-b border-slate-200 min-w-[150px]">Vincular Activo/Proyecto</th>
+                                <th className="px-5 py-3 border-b border-slate-200 w-12"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                            {pageTransactions.map((tx, idx) => {
-                                const corrKey = normalizeDescription(tx.description);
-                                const wasCorrected = !!corrections[corrKey];
+                            {activeItems.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-slate-400 font-medium">
+                                        Todas las transacciones de esta página están marcadas para eliminar.
+                                    </td>
+                                </tr>
+                            ) : (
+                                activeItems.map(({ batchIndex }) => {
+                                    const localIdx = batchIndex - pageIndex * PAGE_SIZE;
+                                    const tx = pageTransactions[localIdx];
+                                    if (!tx) return null;
 
-                                return (
-                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-5 py-3 text-slate-500 font-medium font-mono text-xs">{tx.date}</td>
-                                        <td className="px-5 py-3">
-                                            <input
-                                                type="text"
-                                                value={tx.description}
-                                                onChange={(e) => handleTxChange(idx, "description", e.target.value)}
-                                                className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:ring-0 p-1 font-bold text-slate-900 transition-colors"
-                                            />
-                                        </td>
-                                        <td className="px-5 py-3">
-                                            <input
-                                                type="text"
-                                                value={tx.friendlyDescription || ""}
-                                                onChange={(e) => handleTxChange(idx, "friendlyDescription", e.target.value)}
-                                                placeholder="—"
-                                                className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:ring-0 p-1 text-sm text-indigo-700 transition-colors"
-                                            />
-                                        </td>
-                                        <td className="px-5 py-3 text-right font-mono font-bold">
-                                            <span className={tx.amount < 0 ? "text-slate-900" : "text-emerald-600"}>
-                                                {formatCurrency(tx.amount)}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3">
-                                            <div className="relative flex items-center">
-                                                <select
-                                                    value={tx.category}
-                                                    onChange={(e) => handleTxChange(idx, "category", e.target.value)}
-                                                    className={`w-full rounded-md px-2 py-1.5 text-[11px] font-bold uppercase focus:ring-2 focus:ring-emerald-500/20 appearance-none cursor-pointer ${
-                                                        tx.category !== "OTROS"
-                                                            ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
-                                                            : "text-slate-600 bg-slate-100 border border-slate-200"
-                                                    }`}
-                                                >
-                                                    {categoryNames.map(name => (
-                                                        <option key={name} value={name}>{name}</option>
-                                                    ))}
-                                                    {/* If current value is not in the list, show it anyway */}
-                                                    {tx.category && !categoryNames.includes(tx.category) && (
-                                                        <option value={tx.category}>{tx.category} (nueva)</option>
+                                    const corrKey = normalizeDescription(tx.description);
+                                    const wasCorrected = !!corrections[corrKey];
+
+                                    return (
+                                        <tr key={batchIndex} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-5 py-3 text-slate-500 font-medium font-mono text-xs">{tx.date}</td>
+                                            <td className="px-5 py-3">
+                                                <input
+                                                    type="text"
+                                                    value={tx.description}
+                                                    onChange={(e) => handleTxChange(localIdx, "description", e.target.value)}
+                                                    className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:ring-0 p-1 font-bold text-slate-900 transition-colors"
+                                                />
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <input
+                                                    type="text"
+                                                    value={tx.friendlyDescription || ""}
+                                                    onChange={(e) => handleTxChange(localIdx, "friendlyDescription", e.target.value)}
+                                                    placeholder="—"
+                                                    className="w-full bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:ring-0 p-1 text-sm text-indigo-700 transition-colors"
+                                                />
+                                            </td>
+                                            <td className="px-5 py-3 text-right font-mono font-bold">
+                                                <span className={tx.amount < 0 ? "text-slate-900" : "text-emerald-600"}>
+                                                    {formatCurrency(tx.amount)}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <div className="relative flex items-center">
+                                                    <select
+                                                        value={tx.category}
+                                                        onChange={(e) => handleTxChange(localIdx, "category", e.target.value)}
+                                                        className={`w-full rounded-md px-2 py-1.5 text-[11px] font-bold uppercase focus:ring-2 focus:ring-emerald-500/20 appearance-none cursor-pointer ${
+                                                            tx.category !== "OTROS"
+                                                                ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                                                                : "text-slate-600 bg-slate-100 border border-slate-200"
+                                                        }`}
+                                                    >
+                                                        {categoryNames.map(name => (
+                                                            <option key={name} value={name}>{name}</option>
+                                                        ))}
+                                                        {/* If current value is not in the list, show it anyway */}
+                                                        {tx.category && !categoryNames.includes(tx.category) && (
+                                                            <option value={tx.category}>{tx.category} (nueva)</option>
+                                                        )}
+                                                    </select>
+                                                    {wasCorrected && (
+                                                        <div className="absolute right-5 text-emerald-500 pointer-events-none" title="Auto-corregido por tu revisión">
+                                                            <Sparkles size={10} />
+                                                        </div>
                                                     )}
-                                                </select>
-                                                {wasCorrected && (
-                                                    <div className="absolute right-5 text-emerald-500 pointer-events-none" title="Auto-corregido por tu revisión">
-                                                        <Sparkles size={10} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-5 py-3">
-                                            <select
-                                                value={
-                                                    tx.linkedAssetId ? `asset_${tx.linkedAssetId}` :
-                                                    tx.linkedProjectId ? `proj_${tx.linkedProjectId}` : ""
-                                                }
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (!val) {
-                                                        handleTxChange(idx, "linkedAssetId", "");
-                                                        handleTxChange(idx, "linkedProjectId", "");
-                                                    } else if (val.startsWith("asset_")) {
-                                                        handleTxChange(idx, "linkedAssetId", val.replace("asset_", ""));
-                                                        handleTxChange(idx, "linkedProjectId", "");
-                                                    } else {
-                                                        handleTxChange(idx, "linkedProjectId", val.replace("proj_", ""));
-                                                        handleTxChange(idx, "linkedAssetId", "");
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <select
+                                                    value={
+                                                        tx.linkedAssetId ? `asset_${tx.linkedAssetId}` :
+                                                        tx.linkedProjectId ? `proj_${tx.linkedProjectId}` : ""
                                                     }
-                                                }}
-                                                className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500/20"
-                                            >
-                                                <option value="">-- Suelto --</option>
-                                                <optgroup label="Activos">
-                                                    {assets?.map(a => (
-                                                        <option key={a._id} value={`asset_${a._id}`}>{a.name}</option>
-                                                    ))}
-                                                </optgroup>
-                                                <optgroup label="Proyectos">
-                                                    {projects?.map(p => (
-                                                        <option key={p._id} value={`proj_${p._id}`}>{p.name}</option>
-                                                    ))}
-                                                </optgroup>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        if (!val) {
+                                                            handleTxChange(localIdx, "linkedAssetId", "");
+                                                            handleTxChange(localIdx, "linkedProjectId", "");
+                                                        } else if (val.startsWith("asset_")) {
+                                                            handleTxChange(localIdx, "linkedAssetId", val.replace("asset_", ""));
+                                                            handleTxChange(localIdx, "linkedProjectId", "");
+                                                        } else {
+                                                            handleTxChange(localIdx, "linkedProjectId", val.replace("proj_", ""));
+                                                            handleTxChange(localIdx, "linkedAssetId", "");
+                                                        }
+                                                    }}
+                                                    className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500/20"
+                                                >
+                                                    <option value="">-- Suelto --</option>
+                                                    <optgroup label="Activos">
+                                                        {assets?.map(a => (
+                                                            <option key={a._id} value={`asset_${a._id}`}>{a.name}</option>
+                                                        ))}
+                                                    </optgroup>
+                                                    <optgroup label="Proyectos">
+                                                        {projects?.map(p => (
+                                                            <option key={p._id} value={`proj_${p._id}`}>{p.name}</option>
+                                                        ))}
+                                                    </optgroup>
+                                                </select>
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                <button
+                                                    onClick={() => handleMarkForDeletion(batchIndex)}
+                                                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Marcar para eliminar"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -437,7 +638,13 @@ export default function ReviewClient() {
                 <div className="p-6 bg-slate-50 border-t border-slate-200">
                     <div className="flex items-center justify-between">
                         <div className="text-xs font-medium text-slate-500">
-                            Mostrando {pageTransactions.length} de {batch.totalCount} transacciones
+                            Mostrando {activeItems.length} de {batch.totalCount} transacciones
+                            {deletionItems.length > 0 && (
+                                <span className="ml-2 text-amber-600">
+                                    <Trash2 size={10} className="inline mr-0.5" />
+                                    {deletionItems.length} pendientes de eliminar en esta página
+                                </span>
+                            )}
                             {Object.keys(corrections).length > 0 && (
                                 <span className="ml-2 text-emerald-600">
                                     <Sparkles size={10} className="inline mr-0.5" />

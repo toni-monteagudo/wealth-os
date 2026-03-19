@@ -216,6 +216,8 @@ export interface IStagedTransaction {
     linkedProjectId?: string;
     tags?: string[];
     confirmed: boolean;
+    pendingDeletion?: boolean;
+    deletionReason?: string;
 }
 
 export interface IProcessingStats {

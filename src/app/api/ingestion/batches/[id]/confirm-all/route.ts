@@ -9,16 +9,35 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     try {
         const { id } = await params;
 
+        // Parse deletion indices from the request body (sent by the client)
+        let deletionIndices: Record<string, boolean> = {};
+        try {
+            const body = await req.json();
+            deletionIndices = body?.deletionIndices || {};
+        } catch {
+            // No body or invalid JSON — no deletions
+        }
+
         const batch = await IngestionBatch.findById(id);
         if (!batch) {
             return NextResponse.json({ error: "Batch not found" }, { status: 404 });
         }
 
-        // Get all unconfirmed transactions
-        const unconfirmed = batch.transactions.filter((t: any) => !t.confirmed);
+        // Apply deletion overrides from client to the batch
+        for (const [idxStr, shouldDelete] of Object.entries(deletionIndices)) {
+            const idx = parseInt(idxStr, 10);
+            if (idx >= 0 && idx < batch.transactions.length && shouldDelete) {
+                (batch.transactions[idx] as any).pendingDeletion = true;
+            }
+        }
 
-        if (unconfirmed.length > 0) {
-            const transactionsToInsert = unconfirmed.map((tx: any) => ({
+        // Get all unconfirmed transactions that are NOT pending deletion
+        const toInsert = batch.transactions.filter(
+            (t: any) => !t.confirmed && !t.pendingDeletion
+        );
+
+        if (toInsert.length > 0) {
+            const transactionsToInsert = toInsert.map((tx: any) => ({
                 date: tx.date,
                 description: tx.description,
                 friendlyDescription: tx.friendlyDescription || undefined,
@@ -34,21 +53,30 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             }));
 
             await Transaction.insertMany(transactionsToInsert);
+        }
 
-            // Mark all as confirmed
-            for (const tx of batch.transactions) {
+        // Mark all non-deleted as confirmed
+        for (const tx of batch.transactions) {
+            if (!(tx as any).pendingDeletion) {
                 (tx as any).confirmed = true;
             }
         }
 
-        batch.confirmedCount = batch.totalCount;
+        const confirmedCount = batch.transactions.filter(
+            (t: any) => t.confirmed && !t.pendingDeletion
+        ).length;
+
+        batch.confirmedCount = confirmedCount;
         batch.status = "completed";
         batch.expiresAt = undefined;
         await batch.save();
 
+        const deletedCount = batch.transactions.filter((t: any) => t.pendingDeletion).length;
+
         return NextResponse.json({
             confirmedCount: batch.confirmedCount,
             totalCount: batch.totalCount,
+            deletedCount,
             status: batch.status,
         });
     } catch (error: any) {

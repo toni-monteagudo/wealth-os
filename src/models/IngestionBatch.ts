@@ -14,6 +14,8 @@ const StagedTransactionSchema = new Schema(
         linkedProjectId: { type: String },
         tags: [{ type: String }],
         confirmed: { type: Boolean, default: false },
+        pendingDeletion: { type: Boolean, default: false },
+        deletionReason: { type: String },
     },
     { _id: false }
 );
