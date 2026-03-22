@@ -151,6 +151,26 @@ export interface IDocument {
     url?: string;
 }
 
+// Asset Financials (server-side aggregation)
+export interface IFinancialsSummary {
+    totalIncome: number;
+    totalExpenses: number;
+    cashFlow: number;
+    transactionCount: number;
+}
+
+export interface IAssetFinancials {
+    global: IFinancialsSummary;
+    byYear: Record<string, IFinancialsSummary>;
+    byCategory: Record<string, number>;
+    monthlyEvolution: {
+        month: string;
+        income: number;
+        expenses: number;
+        cashFlow: number;
+    }[];
+}
+
 // Transaction Stats (server-side aggregation)
 export interface ITransactionStats {
     total: number;

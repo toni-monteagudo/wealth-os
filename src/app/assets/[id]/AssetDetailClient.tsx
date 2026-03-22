@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
-import { IAsset, ILiability, ITransaction, Tenant } from "@/types";
+import { IAsset, ILiability, ITransaction, IAssetFinancials, IPaginatedResponse, Tenant } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import {
@@ -13,27 +13,107 @@ import {
     BedDouble, Bath, ArrowUpDown, CarFront, Calendar, Hash, TrendingUp, Banknote, PercentIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { Pagination } from "@/components/ui/Pagination";
+import { PieChart } from "@/components/ui/PieChart";
 import { calculateRemainingBalance } from "@/lib/utils";
 import { ConfirmDeleteModal } from "@/components/ui/ConfirmDeleteModal";
 import { EditAssetForm } from "@/components/forms/EditAssetForm";
 import { LinkLiabilityModal } from "@/components/forms/LinkLiabilityModal";
 import { AddTenantForm } from "@/components/forms/AddTenantForm";
+import {
+    BarChart, Bar, AreaChart, Area, XAxis, YAxis,
+    Tooltip as RechartsTooltip, Legend, ResponsiveContainer, CartesianGrid,
+} from "recharts";
+
+const CATEGORY_COLORS = [
+    "#10b981", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6",
+    "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
+];
 
 export default function AssetDetailClient() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
-    const { data: asset, loading, mutate } = useApi<IAsset>(`/api/assets/${id}`);
-    const { data: liabilities } = useApi<ILiability[]>("/api/liabilities");
-    const { data: transactions } = useApi<ITransaction[]>(`/api/transactions?linkedAssetId=${id}`);
     const { t } = useI18n();
 
+    const { data: asset, loading, mutate } = useApi<IAsset>(`/api/assets/${id}`);
+    const { data: liabilities } = useApi<ILiability[]>("/api/liabilities");
+    const { data: financials } = useApi<IAssetFinancials>(`/api/assets/${id}/financials`);
+
+    const [txPage, setTxPage] = useState(1);
+    const { data: txResponse } = useApi<IPaginatedResponse<ITransaction>>(
+        `/api/transactions?linkedAssetId=${id}&paginated=true&limit=25&page=${txPage}`
+    );
+
+    const [selectedYear, setSelectedYear] = useState<string>("global");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
     const [editingTenant, setEditingTenant] = useState<Tenant | undefined>(undefined);
     const [showHistoricTenants, setShowHistoricTenants] = useState(false);
+
+    // Derived data from paginated transactions
+    const transactions = txResponse?.data || [];
+    const txPagination = txResponse?.pagination;
+
+    // Financials for the selected period
+    const currentFinancials = useMemo(() => {
+        if (!financials) return null;
+        if (selectedYear === "global") return financials.global;
+        return financials.byYear[selectedYear] || null;
+    }, [financials, selectedYear]);
+
+    const availableYears = useMemo(() => {
+        if (!financials) return [];
+        return Object.keys(financials.byYear).sort();
+    }, [financials]);
+
+    // Bar chart data: by month (if year selected) or by year (if global)
+    const barChartData = useMemo(() => {
+        if (!financials) return [];
+        if (selectedYear === "global") {
+            return availableYears.map(year => ({
+                label: year,
+                income: financials.byYear[year].totalIncome,
+                expenses: Math.abs(financials.byYear[year].totalExpenses),
+            }));
+        }
+        return financials.monthlyEvolution
+            .filter(m => m.month.startsWith(selectedYear))
+            .map(m => ({
+                label: m.month.slice(5), // "01", "02", etc.
+                income: m.income,
+                expenses: Math.abs(m.expenses),
+            }));
+    }, [financials, selectedYear, availableYears]);
+
+    // Area chart: cumulative cash flow over time
+    const areaChartData = useMemo(() => {
+        if (!financials) return [];
+        const months = selectedYear === "global"
+            ? financials.monthlyEvolution
+            : financials.monthlyEvolution.filter(m => m.month.startsWith(selectedYear));
+        let cumulative = 0;
+        return months.map(m => {
+            cumulative += m.cashFlow;
+            return { label: selectedYear === "global" ? m.month : m.month.slice(5), cashFlow: cumulative };
+        });
+    }, [financials, selectedYear]);
+
+    // Pie chart: expense categories (always uses selected period view via global byCategory)
+    const categoryPieData = useMemo(() => {
+        if (!financials) return [];
+        const entries = Object.entries(financials.byCategory)
+            .filter(([, v]) => v < 0) // only expenses
+            .map(([name, value], i) => ({
+                name,
+                value: Math.abs(value),
+                color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+            }))
+            .sort((a, b) => b.value - a.value);
+        return entries;
+    }, [financials]);
 
     if (loading) return <div className="animate-pulse h-96 bg-slate-100 rounded-2xl w-full"></div>;
     if (!asset) return <div className="text-center p-20 text-slate-500">Asset not found.</div>;
@@ -91,12 +171,13 @@ export default function AssetDetailClient() {
     const activeTenants = allTenants.filter(t => !t.contractEnd || new Date(t.contractEnd) >= new Date());
     const historicTenants = allTenants.filter(t => t.contractEnd && new Date(t.contractEnd) < new Date());
 
-    // KPIs from real transactions
-    const txList = transactions || [];
-    const totalIncome = txList.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
-    const totalExpenses = txList.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0);
-    const cashFlow = totalIncome + totalExpenses;
-    const grossYield = asset.value > 0 ? (totalIncome / asset.value) * 100 : 0;
+    // Capital gain
+    const capitalGain = asset.value - (asset.purchasePrice || 0);
+
+    // Net yield from financials
+    const netYield = currentFinancials && asset.purchasePrice
+        ? ((currentFinancials.totalIncome + currentFinancials.totalExpenses) / asset.purchasePrice) * 100
+        : 0;
 
     const openAddTenant = () => {
         setEditingTenant(undefined);
@@ -107,6 +188,8 @@ export default function AssetDetailClient() {
         setEditingTenant(tenant);
         setIsTenantModalOpen(true);
     };
+
+    const tooltipFormatter = (value: number | undefined) => formatCurrency(value ?? 0);
 
     return (
         <div className="flex flex-col gap-6">
@@ -188,6 +271,7 @@ export default function AssetDetailClient() {
 
                 {/* Main Stats Column */}
                 <div className="lg:col-span-2 flex flex-col gap-6">
+                    {/* Top stats row */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <PremiumCard>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.current_valuation")}</p>
@@ -199,7 +283,9 @@ export default function AssetDetailClient() {
                         </PremiumCard>
                         <PremiumCard>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.gross_capital_gain")}</p>
-                            <p className="text-2xl font-bold text-emerald-600">+{formatCurrency(asset.value - (asset.purchasePrice || 0))}</p>
+                            <p className={`text-2xl font-bold ${capitalGain >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                {capitalGain >= 0 ? "+" : ""}{formatCurrency(capitalGain)}
+                            </p>
                         </PremiumCard>
                         {asset.type === 'real_estate' && (
                             <PremiumCard>
@@ -209,36 +295,146 @@ export default function AssetDetailClient() {
                         )}
                     </div>
 
-                    {/* KPIs from real bank transactions */}
-                    {asset.type === 'real_estate' && txList.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <PremiumCard className="bg-emerald-50 border-emerald-100">
-                                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><TrendingUp size={10} /> Ingresos Reales</p>
-                                <p className="text-2xl font-bold text-emerald-700">{formatCurrency(totalIncome)}</p>
+                    {/* Year selector + KPIs from financials */}
+                    {asset.type === 'real_estate' && currentFinancials && (
+                        <>
+                            {/* Year Selector Tabs */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                    onClick={() => setSelectedYear("global")}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                                        selectedYear === "global"
+                                            ? "bg-slate-900 text-white"
+                                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                    }`}
+                                >
+                                    Global
+                                </button>
+                                {availableYears.map(year => (
+                                    <button
+                                        key={year}
+                                        onClick={() => setSelectedYear(year)}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                                            selectedYear === year
+                                                ? "bg-slate-900 text-white"
+                                                : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                        }`}
+                                    >
+                                        {year}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* KPI Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <PremiumCard className="bg-emerald-50 border-emerald-100">
+                                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><TrendingUp size={10} /> Ingresos Reales</p>
+                                    <p className="text-2xl font-bold text-emerald-700">{formatCurrency(currentFinancials.totalIncome)}</p>
+                                </PremiumCard>
+                                <PremiumCard className="bg-rose-50 border-rose-100">
+                                    <p className="text-[10px] text-rose-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><Banknote size={10} /> Gastos Reales</p>
+                                    <p className="text-2xl font-bold text-rose-700">{formatCurrency(currentFinancials.totalExpenses)}</p>
+                                </PremiumCard>
+                                <PremiumCard className={currentFinancials.cashFlow >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}>
+                                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1 ${currentFinancials.cashFlow >= 0 ? "text-emerald-600" : "text-rose-600"}`}><Banknote size={10} /> Cash Flow</p>
+                                    <p className={`text-2xl font-bold ${currentFinancials.cashFlow >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatCurrency(currentFinancials.cashFlow)}</p>
+                                </PremiumCard>
+                                <PremiumCard className={netYield >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}>
+                                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1 ${netYield >= 0 ? "text-emerald-600" : "text-rose-600"}`}><PercentIcon size={10} /> Rentabilidad Neta</p>
+                                    <p className={`text-2xl font-bold ${netYield >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{netYield.toFixed(2)}%</p>
+                                </PremiumCard>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Charts Section */}
+                    {asset.type === 'real_estate' && financials && barChartData.length > 0 && (
+                        <div className="flex flex-col gap-6">
+                            {/* Income vs Expenses Bar Chart */}
+                            <PremiumCard>
+                                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest mb-4">
+                                    Ingresos vs Gastos {selectedYear !== "global" ? selectedYear : ""}
+                                </h3>
+                                <div className="h-64">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={barChartData} barGap={4}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                                            <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                            <RechartsTooltip
+                                                formatter={tooltipFormatter}
+                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                            />
+                                            <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                            <Bar dataKey="income" name="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="expenses" name="Gastos" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </PremiumCard>
-                            <PremiumCard className="bg-rose-50 border-rose-100">
-                                <p className="text-[10px] text-rose-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><Banknote size={10} /> Gastos Reales</p>
-                                <p className="text-2xl font-bold text-rose-700">{formatCurrency(totalExpenses)}</p>
-                            </PremiumCard>
-                            <PremiumCard className={cashFlow >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}>
-                                <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1 ${cashFlow >= 0 ? "text-emerald-600" : "text-rose-600"}`}><Banknote size={10} /> Cash Flow</p>
-                                <p className={`text-2xl font-bold ${cashFlow >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatCurrency(cashFlow)}</p>
-                            </PremiumCard>
-                            <PremiumCard className="bg-emerald-50 border-emerald-100">
-                                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><PercentIcon size={10} /> Rentabilidad Bruta</p>
-                                <p className="text-2xl font-bold text-emerald-700">{grossYield.toFixed(2)}%</p>
-                            </PremiumCard>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Cash Flow Evolution Area Chart */}
+                                <PremiumCard>
+                                    <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest mb-4">
+                                        Cash Flow Acumulado
+                                    </h3>
+                                    <div className="h-56">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={areaChartData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+                                                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                                <RechartsTooltip
+                                                    formatter={tooltipFormatter}
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="cashFlow"
+                                                    name="Cash Flow"
+                                                    stroke="#10b981"
+                                                    fill="#10b981"
+                                                    fillOpacity={0.15}
+                                                    strokeWidth={2}
+                                                />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </PremiumCard>
+
+                                {/* Category Breakdown Pie Chart */}
+                                <PremiumCard>
+                                    <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest mb-4">
+                                        Gastos por Categoría
+                                    </h3>
+                                    {categoryPieData.length > 0 ? (
+                                        <>
+                                            <PieChart
+                                                data={categoryPieData}
+                                                totalLabel="GASTOS"
+                                                totalValue={formatCurrency(Math.abs(financials.global.totalExpenses))}
+                                            />
+                                            <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                                                {categoryPieData.slice(0, 6).map(item => (
+                                                    <div key={item.name} className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                                                        <span className="size-2 rounded-full" style={{ backgroundColor: item.color }}></span>
+                                                        {item.name}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="h-48 flex items-center justify-center text-slate-400 text-sm">
+                                            Sin gastos registrados
+                                        </div>
+                                    )}
+                                </PremiumCard>
+                            </div>
                         </div>
                     )}
 
-                    <PremiumCard className="min-h-[300px] flex items-center justify-center bg-slate-50 border border-slate-200 shadow-none">
-                        <div className="text-center text-slate-400">
-                            <p className="font-bold mb-2">[{t("asset_detail.value_history")} Chart Placeholder]</p>
-                            <p className="text-xs">Integrate Recharts AreaChart here mapping property valuation over time.</p>
-                        </div>
-                    </PremiumCard>
-
-                    {/* Tenants Section — full width in main column */}
+                    {/* Tenants Section */}
                     {asset.type === 'real_estate' && (
                         <PremiumCard className="!p-0 overflow-hidden">
                             <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
@@ -349,41 +545,54 @@ export default function AssetDetailClient() {
                         </PremiumCard>
                     )}
 
-                    {/* Linked Transactions Section */}
+                    {/* Linked Transactions Section (paginated) */}
                     <PremiumCard className="!p-0 overflow-hidden">
                         <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                             <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest flex items-center gap-2">
                                 <ArrowRightLeft size={16} className="text-accent" /> {t("asset_detail.linked_transactions")}
                             </h3>
-                            <span className="text-xs font-bold text-slate-500">{transactions?.length || 0} registros</span>
+                            <span className="text-xs font-bold text-slate-500">
+                                {txPagination ? `${txPagination.total} registros` : `${transactions.length} registros`}
+                            </span>
                         </div>
-                        {(!transactions || transactions.length === 0) ? (
+                        {transactions.length === 0 ? (
                             <div className="p-8 text-center text-slate-400 font-medium">{t("asset_detail.no_transactions")}</div>
                         ) : (
-                            <div className="overflow-x-auto max-h-[300px]">
-                                <table className="w-full text-left text-sm whitespace-nowrap">
-                                    <thead className="bg-white text-[10px] uppercase font-bold text-slate-400 tracking-wider sticky top-0">
-                                        <tr>
-                                            <th className="px-5 py-3 border-b border-slate-100">Fecha</th>
-                                            <th className="px-5 py-3 border-b border-slate-100">Descripción</th>
-                                            <th className="px-5 py-3 border-b border-slate-100">Categoría</th>
-                                            <th className="px-5 py-3 border-b border-slate-100 text-right">Importe</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {transactions.map((tx) => (
-                                            <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-5 py-3 text-slate-500 font-medium">{tx.date}</td>
-                                                <td className="px-5 py-3 font-bold text-slate-900">{tx.description}</td>
-                                                <td className="px-5 py-3"><Badge variant="neutral">{tx.category}</Badge></td>
-                                                <td className={`px-5 py-3 text-right font-mono font-bold ${tx.amount < 0 ? "text-slate-900" : "text-emerald-600"}`}>
-                                                    {formatCurrency(tx.amount)}
-                                                </td>
+                            <>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm whitespace-nowrap">
+                                        <thead className="bg-white text-[10px] uppercase font-bold text-slate-400 tracking-wider sticky top-0">
+                                            <tr>
+                                                <th className="px-5 py-3 border-b border-slate-100">Fecha</th>
+                                                <th className="px-5 py-3 border-b border-slate-100">Descripción</th>
+                                                <th className="px-5 py-3 border-b border-slate-100">Categoría</th>
+                                                <th className="px-5 py-3 border-b border-slate-100 text-right">Importe</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {transactions.map((tx) => (
+                                                <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-5 py-3 text-slate-500 font-medium">{tx.date}</td>
+                                                    <td className="px-5 py-3 font-bold text-slate-900">{tx.friendlyDescription || tx.description}</td>
+                                                    <td className="px-5 py-3"><Badge variant="neutral">{tx.category}</Badge></td>
+                                                    <td className={`px-5 py-3 text-right font-mono font-bold ${tx.amount < 0 ? "text-slate-900" : "text-emerald-600"}`}>
+                                                        {formatCurrency(tx.amount)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {txPagination && txPagination.totalPages > 1 && (
+                                    <div className="p-4 border-t border-slate-100">
+                                        <Pagination
+                                            page={txPagination.page}
+                                            totalPages={txPagination.totalPages}
+                                            onPageChange={setTxPage}
+                                        />
+                                    </div>
+                                )}
+                            </>
                         )}
                     </PremiumCard>
                 </div>
