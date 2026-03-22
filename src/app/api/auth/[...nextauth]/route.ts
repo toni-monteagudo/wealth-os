@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
 
                 const user = await User.findOne({ email: credentials.username });
 
-                if (!user) {
+                if (!user || !user.password) {
                     throw new Error("Usuario no encontrado");
                 }
 

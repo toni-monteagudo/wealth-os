@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import Asset from "@/models/Asset";
 import Liability from "@/models/Liability";
 import Transaction from "@/models/Transaction";
+import { calculateRemainingBalance } from "@/lib/utils";
 
 export async function GET() {
     await dbConnect();
@@ -13,7 +14,7 @@ export async function GET() {
         const transactions = await Transaction.find({});
 
         const totalAssets = assets.reduce((acc, curr) => acc + curr.value, 0);
-        const totalDebt = liabilities.reduce((acc, curr) => acc + curr.balance, 0);
+        const totalDebt = liabilities.reduce((acc, curr) => acc + calculateRemainingBalance(curr), 0);
         const netWorth = totalAssets - totalDebt;
 
         // LTV = Debt / Value
