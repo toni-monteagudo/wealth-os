@@ -7,7 +7,7 @@ const ProjectSchema = new Schema<ProjectDocument>(
     {
         name: { type: String, required: true },
         description: { type: String },
-        type: { type: String, enum: ["renovation", "vacation"], default: "renovation" },
+        type: { type: String, enum: ["renovation", "vacation", "event"], default: "renovation" },
         linkedAssetId: { type: Schema.Types.ObjectId, ref: "Asset" },
         startDate: { type: String },
         destination: { type: String },

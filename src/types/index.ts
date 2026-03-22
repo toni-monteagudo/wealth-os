@@ -125,7 +125,7 @@ export interface Note {
     isImportant?: boolean;
 }
 
-export type ProjectType = "renovation" | "vacation";
+export type ProjectType = "renovation" | "vacation" | "event";
 
 export interface IProject {
     _id?: string;

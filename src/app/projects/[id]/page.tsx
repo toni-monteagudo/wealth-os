@@ -6,7 +6,7 @@ import { useApi } from "@/hooks/useApi";
 import { IProject, ITransaction } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { PremiumCard } from "@/components/ui/PremiumCard";
-import { Hammer, Plane, CalendarClock, ArrowRightLeft, MapPin } from "lucide-react";
+import { Hammer, Plane, PartyPopper, CalendarClock, ArrowRightLeft, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
 export default function ProjectPage() {
@@ -25,8 +25,9 @@ export default function ProjectPage() {
 
     const projectType = project.type ?? "renovation";
     const isVacation = projectType === "vacation";
-    const HeaderIcon = isVacation ? Plane : Hammer;
-    const notesTitle = isVacation ? t("projects.travel_notes") : t("projects.construction_notes");
+    const isEvent = projectType === "event";
+    const HeaderIcon = isVacation ? Plane : isEvent ? PartyPopper : Hammer;
+    const notesTitle = isVacation ? t("projects.travel_notes") : isEvent ? t("projects.event_notes") : t("projects.construction_notes");
 
     return (
         <main className="p-6 lg:p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-6">
@@ -42,7 +43,7 @@ export default function ProjectPage() {
                         <h1 className="text-4xl font-bold text-white tracking-tight mb-1">{project.name}</h1>
                         <div className="flex items-center gap-3">
                             <p className="text-slate-400 font-medium">{project.description}</p>
-                            {isVacation && project.destination && (
+                            {(isVacation || isEvent) && project.destination && (
                                 <span className="inline-flex items-center gap-1 text-sky-300 text-sm font-bold">
                                     <MapPin size={14} /> {project.destination}
                                 </span>
@@ -178,12 +179,14 @@ export default function ProjectPage() {
                             </div>
                         </div>
 
-                        {/* Travel dates for vacation projects */}
-                        {isVacation && (project.startDate || project.estimatedEnd) && (
+                        {/* Dates for vacation/event projects */}
+                        {(isVacation || isEvent) && (project.startDate || project.estimatedEnd) && (
                             <div className="mt-4 pt-4 border-t border-slate-100">
-                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-2">{t("projects.travel_dates")}</p>
+                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-2">
+                                    {isVacation ? t("projects.travel_dates") : t("projects.event_date")}
+                                </p>
                                 <p className="text-sm font-bold text-slate-700">
-                                    {project.startDate || "—"} → {project.estimatedEnd || "—"}
+                                    {project.startDate || "—"}{isVacation ? ` → ${project.estimatedEnd || "—"}` : ""}
                                 </p>
                             </div>
                         )}

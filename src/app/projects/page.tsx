@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Hammer, Clock, Plane, Plus } from "lucide-react";
+import { Hammer, Clock, Plane, PartyPopper, Plus } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
 import { IProject, ProjectType } from "@/types";
@@ -16,6 +16,7 @@ const FILTER_TABS: { key: string; type?: ProjectType }[] = [
     { key: "filter_all" },
     { key: "filter_renovations", type: "renovation" },
     { key: "filter_vacations", type: "vacation" },
+    { key: "filter_events", type: "event" },
 ];
 
 export default function ProjectsListPage() {
@@ -30,7 +31,10 @@ export default function ProjectsListPage() {
     };
 
     const getProjectIcon = (project: IProject) => {
-        return (project.type ?? "renovation") === "vacation" ? Plane : Hammer;
+        const type = project.type ?? "renovation";
+        if (type === "vacation") return Plane;
+        if (type === "event") return PartyPopper;
+        return Hammer;
     };
 
     return (
@@ -106,7 +110,7 @@ export default function ProjectsListPage() {
                                 <PremiumCard className="p-6 flex flex-col gap-4 hover:border-accent hover:shadow-lg transition-all group h-full">
                                     <div className="flex justify-between items-start">
                                         <div className="flex items-start gap-3">
-                                            <div className={`p-2 rounded-lg ${projType === "vacation" ? "bg-sky-50 text-sky-600" : "bg-slate-100 text-slate-600"}`}>
+                                            <div className={`p-2 rounded-lg ${projType === "vacation" ? "bg-sky-50 text-sky-600" : projType === "event" ? "bg-violet-50 text-violet-600" : "bg-slate-100 text-slate-600"}`}>
                                                 <Icon size={18} />
                                             </div>
                                             <div>
@@ -124,6 +128,8 @@ export default function ProjectsListPage() {
                                             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                                                 projType === "vacation"
                                                     ? "bg-sky-50 text-sky-600"
+                                                    : projType === "event"
+                                                    ? "bg-violet-50 text-violet-600"
                                                     : "bg-slate-100 text-slate-500"
                                             }`}>
                                                 {t(`projects.type_${projType}`)}

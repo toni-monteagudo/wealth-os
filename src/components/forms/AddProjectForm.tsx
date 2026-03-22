@@ -6,7 +6,7 @@ import { FormField } from "@/components/ui/FormField";
 import { IProject, IAsset, ProjectType } from "@/types";
 import { useApi } from "@/hooks/useApi";
 import { useI18n } from "@/i18n/I18nContext";
-import { Hammer, Plane } from "lucide-react";
+import { Hammer, Plane, PartyPopper } from "lucide-react";
 
 interface AddProjectFormProps {
     isOpen: boolean;
@@ -54,8 +54,8 @@ export function AddProjectForm({ isOpen, onClose, onSuccess }: AddProjectFormPro
             ...prev,
             type,
             capitalize: type === "renovation",
-            linkedAssetId: type === "vacation" ? undefined : prev.linkedAssetId,
-            destination: type === "renovation" ? "" : prev.destination,
+            linkedAssetId: type === "renovation" ? prev.linkedAssetId : undefined,
+            destination: type === "vacation" ? prev.destination : "",
             startDate: type === "renovation" ? "" : prev.startDate,
         }));
     };
@@ -81,7 +81,13 @@ export function AddProjectForm({ isOpen, onClose, onSuccess }: AddProjectFormPro
         }
     };
 
-    const isVacation = formData.type === "vacation";
+    const activeType = formData.type ?? "renovation";
+
+    const typeButtons: { type: ProjectType; icon: typeof Hammer; labelKey: string }[] = [
+        { type: "renovation", icon: Hammer, labelKey: "type_renovation" },
+        { type: "vacation", icon: Plane, labelKey: "type_vacation" },
+        { type: "event", icon: PartyPopper, labelKey: "type_event" },
+    ];
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t("projects.new_project")}>
@@ -91,31 +97,22 @@ export function AddProjectForm({ isOpen, onClose, onSuccess }: AddProjectFormPro
                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                         {t("projects.select_type")}
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setProjectType("renovation")}
-                            className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-left ${
-                                !isVacation
-                                    ? "border-slate-900 bg-slate-900 text-white shadow-md"
-                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                            }`}
-                        >
-                            <Hammer size={18} />
-                            <span className="text-sm font-bold">{t("projects.type_renovation")}</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setProjectType("vacation")}
-                            className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-left ${
-                                isVacation
-                                    ? "border-slate-900 bg-slate-900 text-white shadow-md"
-                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                            }`}
-                        >
-                            <Plane size={18} />
-                            <span className="text-sm font-bold">{t("projects.type_vacation")}</span>
-                        </button>
+                    <div className="grid grid-cols-3 gap-3">
+                        {typeButtons.map(({ type, icon: Icon, labelKey }) => (
+                            <button
+                                key={type}
+                                type="button"
+                                onClick={() => setProjectType(type)}
+                                className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-left ${
+                                    activeType === type
+                                        ? "border-slate-900 bg-slate-900 text-white shadow-md"
+                                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                                }`}
+                            >
+                                <Icon size={18} />
+                                <span className="text-sm font-bold">{t(`projects.${labelKey}`)}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -124,11 +121,15 @@ export function AddProjectForm({ isOpen, onClose, onSuccess }: AddProjectFormPro
                     name="name"
                     value={formData.name || ""}
                     onChange={handleChange}
-                    placeholder={isVacation ? "Ej. Viaje a Filipinas 2026" : "Ej. Reforma Baño"}
+                    placeholder={
+                        activeType === "vacation" ? "Ej. Viaje a Filipinas 2026" :
+                        activeType === "event" ? "Ej. Boda de Ana y Pedro" :
+                        "Ej. Reforma Baño"
+                    }
                     required
                 />
 
-                {isVacation && (
+                {activeType === "vacation" && (
                     <FormField
                         label={t("projects.destination")}
                         name="destination"
@@ -138,12 +139,26 @@ export function AddProjectForm({ isOpen, onClose, onSuccess }: AddProjectFormPro
                     />
                 )}
 
+                {activeType === "event" && (
+                    <FormField
+                        label={t("projects.venue")}
+                        name="destination"
+                        value={formData.destination || ""}
+                        onChange={handleChange}
+                        placeholder="Ej. Hotel W Barcelona"
+                    />
+                )}
+
                 <FormField
                     label="Descripción"
                     name="description"
                     value={formData.description || ""}
                     onChange={handleChange}
-                    placeholder={isVacation ? "Breve descripción del viaje" : "Breve descripción del proyecto"}
+                    placeholder={
+                        activeType === "vacation" ? "Breve descripción del viaje" :
+                        activeType === "event" ? "Breve descripción del evento" :
+                        "Breve descripción del proyecto"
+                    }
                 />
 
                 <FormField
@@ -155,9 +170,9 @@ export function AddProjectForm({ isOpen, onClose, onSuccess }: AddProjectFormPro
                     required
                 />
 
-                {isVacation && (
+                {(activeType === "vacation" || activeType === "event") && (
                     <FormField
-                        label={t("projects.start_date")}
+                        label={activeType === "event" ? t("projects.event_date") : t("projects.start_date")}
                         name="startDate"
                         type="date"
                         value={formData.startDate || ""}
@@ -166,14 +181,18 @@ export function AddProjectForm({ isOpen, onClose, onSuccess }: AddProjectFormPro
                 )}
 
                 <FormField
-                    label={isVacation ? t("projects.return_date") : "Fecha Estimada de Fin"}
+                    label={
+                        activeType === "vacation" ? t("projects.return_date") :
+                        activeType === "event" ? t("projects.estimated_end_date") :
+                        "Fecha Estimada de Fin"
+                    }
                     name="estimatedEnd"
                     type="date"
                     value={formData.estimatedEnd || ""}
                     onChange={handleChange}
                 />
 
-                {!isVacation && assets && assets.length > 0 && (
+                {activeType === "renovation" && assets && assets.length > 0 && (
                     <FormField
                         label={t("projects.linked_asset")}
                         name="linkedAssetId"
