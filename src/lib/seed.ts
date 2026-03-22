@@ -32,7 +32,8 @@ export async function seedDatabase() {
         tenants: [
             {
                 name: "Marc & Ana",
-                contractUntil: "Dic 2025",
+                contractStart: "2024-01-01",
+                contractEnd: "2025-12-31",
                 monthlyRent: 4400,
             }
         ]
@@ -56,16 +57,20 @@ export async function seedDatabase() {
     await Liability.create({
         name: "Hipoteca Activa",
         type: "mortgage",
-        balance: 400000,
+        initialCapital: 400000,
+        startDate: "2021-10-15",
+        termMonths: 300,
         interestRate: 3.2,
+        tin: 3.2,
+        interestType: "fixed" as const,
         monthlyPayment: 1850,
         bank: "Banco Santander",
         loanNumber: "#9921",
-        linkedAssetId: loft._id,
+        linkedAssetId: loft._id.toString(),
     });
 
     // 3. Reserves
-    await Reserve.create([
+    await Reserve.insertMany([
         {
             name: "Tax Vault (VAT/IRPF)",
             type: "tax",
@@ -80,7 +85,7 @@ export async function seedDatabase() {
             balance: 8200,
             target: 15000,
             allocationPercent: 5,
-            linkedAssetId: loft._id,
+            linkedAssetId: loft._id.toString(),
         },
         {
             name: "Fondo de Emergencia",
@@ -94,7 +99,7 @@ export async function seedDatabase() {
     await Project.create({
         name: "BCN Loft Renovation",
         description: "Kitchen & Bathroom upgrade",
-        linkedAssetId: loft._id,
+        linkedAssetId: loft._id.toString(),
         budget: 120000,
         actualSpent: 85000,
         progress: 70,
@@ -115,7 +120,7 @@ export async function seedDatabase() {
     });
 
     // 5. Documents
-    await Document.create([
+    await Document.insertMany([
         { name: "Property Deed", type: "property", entity: "BCN Loft", fileType: "PDF", status: "verified", uploadDate: "12 Oct" },
         { name: "SaaS Inccorp", type: "legal", entity: "Delaware", fileType: "PDF", status: "active", uploadDate: "05 Sep" },
         { name: "Insurance Policy", type: "insurance", entity: "AXA Seguros", fileType: "PDF", status: "active", uploadDate: "01 Jan", expirationDate: "2023-10-30" },
@@ -123,7 +128,7 @@ export async function seedDatabase() {
     ]);
 
     // 6. Transactions
-    await Transaction.create([
+    await Transaction.insertMany([
         { date: "24 OCT", description: "Préstamo Hipotecario 0049", amount: -1245, category: "AMORTIZATION", tags: ["HIPOTECA"], status: "needs_review", source: "csv_import", processingTime: "4h ago" },
         { date: "22 OCT", description: "Nómina TechCorp SL", amount: 4850, category: "REVENUE", tags: ["SALARIO", "INGRESO"], status: "needs_review", source: "csv_import", processingTime: "2m ago" },
         { date: "21 OCT", description: "Transferencia a Bóveda Fiscal", amount: -1020, category: "INTERNAL", tags: ["PROVISIÓN IMPUESTOS"], status: "confirmed", source: "manual" },

@@ -19,7 +19,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             const reserves = await Reserve.find({ allocationPercent: { $gt: 0 } });
 
             for (const reserve of reserves) {
-                const allocAmount = transaction.amount * (reserve.allocationPercent / 100);
+                const allocAmount = transaction.amount * ((reserve.allocationPercent ?? 0) / 100);
                 reserve.balance += allocAmount;
                 await reserve.save();
             }
