@@ -442,6 +442,7 @@ export default function AssetDetailClient() {
                         </div>
                     )}
 
+
                     {/* Tenants Section */}
                     {asset.type === 'real_estate' && (
                         <PremiumCard className="!p-0 overflow-hidden">
