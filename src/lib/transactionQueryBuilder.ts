@@ -30,21 +30,57 @@ export function buildTransactionQuery(searchParams: URLSearchParams): Record<str
         if (dateTo) query.date.$lte = dateTo;
     }
 
-    // Amount type (income/expense)
+    // Amount type and range filtering
+    // Expenses are stored as negative values, but users filter by absolute value
     const amountType = searchParams.get("amountType");
-    if (amountType === "income") {
-        query.amount = { $gt: 0 };
-    } else if (amountType === "expense") {
-        query.amount = { $lt: 0 };
-    }
-
-    // Amount range (merge with existing amount constraints from amountType)
     const amountMin = searchParams.get("amountMin");
     const amountMax = searchParams.get("amountMax");
-    if (amountMin || amountMax) {
-        if (!query.amount) query.amount = {};
-        if (amountMin) query.amount.$gte = parseFloat(amountMin);
-        if (amountMax) query.amount.$lte = parseFloat(amountMax);
+    const min = amountMin ? parseFloat(amountMin) : null;
+    const max = amountMax ? parseFloat(amountMax) : null;
+
+    if (amountType === "income") {
+        const amountQuery: Record<string, number> = { $gt: 0 };
+        if (min) amountQuery.$gte = min;
+        if (max) amountQuery.$lte = max;
+        query.amount = amountQuery;
+    } else if (amountType === "expense") {
+        // Negate user values: user enters 100-500, we query -500 to -100
+        const amountQuery: Record<string, number> = { $lt: 0 };
+        if (min) amountQuery.$lte = -min;
+        if (max) amountQuery.$gte = -max;
+        query.amount = amountQuery;
+    } else if (min || max) {
+        // No type selected: filter by absolute value using $or for both signs
+        if (min && max) {
+            const amountOr = [
+                { amount: { $gte: min, $lte: max } },
+                { amount: { $gte: -max, $lte: -min } },
+            ];
+            if (query.$or) {
+                // search $or already exists, combine with $and
+                query.$and = [{ $or: query.$or }, { $or: amountOr }];
+                delete query.$or;
+            } else {
+                query.$or = amountOr;
+            }
+        } else if (min) {
+            // abs(amount) >= min
+            const amountOr = [
+                { amount: { $gte: min } },
+                { amount: { $lte: -min } },
+            ];
+            if (query.$or) {
+                query.$and = [{ $or: query.$or }, { $or: amountOr }];
+                delete query.$or;
+            } else {
+                query.$or = amountOr;
+            }
+        } else if (max) {
+            // abs(amount) <= max — this is just amount between -max and max
+            query.amount = { $gte: -max, $lte: max };
+        }
+    } else if (amountType) {
+        // amountType set but no min/max — shouldn't reach here but guard
     }
 
     return query;
