@@ -28,4 +28,8 @@ const SettingsSchema = new Schema<SettingsDocument>(
     { timestamps: true }
 );
 
-export default mongoose.models.Settings || mongoose.model<SettingsDocument>("Settings", SettingsSchema);
+if (mongoose.models.Settings) {
+    mongoose.deleteModel("Settings");
+}
+
+export default mongoose.model<SettingsDocument>("Settings", SettingsSchema);

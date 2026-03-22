@@ -12,8 +12,16 @@ const AssetSchema = new Schema<AssetDocument>(
         purchasePrice: { type: Number },
         purchaseDate: { type: String },
         area: { type: Number },
+        bedrooms: { type: Number },
+        bathrooms: { type: Number },
+        hasElevator: { type: Boolean },
+        hasParking: { type: Boolean },
+        yearBuilt: { type: Number },
+        cadastralReference: { type: String },
+        notes: { type: String },
         image: { type: String },
         rentalYield: { type: Number },
+        keywords: [{ type: String }],
         mrr: { type: Number },
         momGrowth: { type: Number },
         employees: [
@@ -27,12 +35,27 @@ const AssetSchema = new Schema<AssetDocument>(
             {
                 name: { type: String },
                 avatar: { type: String },
-                contractUntil: { type: String },
+                phone: { type: String },
+                email: { type: String },
+                contractStart: { type: String },
+                contractEnd: { type: String },
                 monthlyRent: { type: Number },
+                deposit: { type: Number },
+                rentIncreases: [
+                    {
+                        date: { type: String },
+                        newRent: { type: Number },
+                    },
+                ],
+                notes: { type: String },
             },
         ],
     },
     { timestamps: true }
 );
 
-export default mongoose.models.Asset || mongoose.model<AssetDocument>("Asset", AssetSchema);
+if (mongoose.models.Asset) {
+    mongoose.deleteModel("Asset");
+}
+
+export default mongoose.model<AssetDocument>("Asset", AssetSchema);

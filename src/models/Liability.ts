@@ -7,8 +7,17 @@ const LiabilitySchema = new Schema<LiabilityDocument>(
     {
         name: { type: String, required: true },
         type: { type: String, enum: ["mortgage", "loan"], required: true },
-        balance: { type: Number, required: true, default: 0 },
+        initialCapital: { type: Number },
+        startDate: { type: String },
+        termMonths: { type: Number },
+        interestType: { type: String, enum: ["fixed", "variable"] },
         interestRate: { type: Number, required: true, default: 0 },
+        tin: { type: Number },
+        tae: { type: Number },
+        lateInterestRate: { type: Number },
+        amortizationCommission: { type: Number },
+        cancellationCommission: { type: Number },
+        paymentChargeDay: { type: Number },
         monthlyPayment: { type: Number, required: true, default: 0 },
         bank: { type: String, required: true },
         loanNumber: { type: String },
@@ -17,4 +26,8 @@ const LiabilitySchema = new Schema<LiabilityDocument>(
     { timestamps: true }
 );
 
-export default mongoose.models.Liability || mongoose.model<LiabilityDocument>("Liability", LiabilitySchema);
+if (mongoose.models.Liability) {
+    mongoose.deleteModel("Liability");
+}
+
+export default mongoose.model<LiabilityDocument>("Liability", LiabilitySchema);

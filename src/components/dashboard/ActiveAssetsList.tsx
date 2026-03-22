@@ -9,6 +9,7 @@ import { IAsset, ILiability } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { calculateRemainingBalance } from "@/lib/utils";
 
 export default function ActiveAssetsList() {
     const { data: assets, loading: loadingAssets } = useApi<IAsset[]>("/api/assets");
@@ -66,7 +67,7 @@ export default function ActiveAssetsList() {
                                         </div>
                                         <div>
                                             <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">{t("dashboard.mortgage")}</p>
-                                            <p className="text-rose-500 font-bold text-xl">${((linkedMortgage?.balance || 0) / 1000).toFixed(0)}k</p>
+                                            <p className="text-rose-500 font-bold text-xl">${(calculateRemainingBalance(linkedMortgage) / 1000).toFixed(0)}k</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between text-sm mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">

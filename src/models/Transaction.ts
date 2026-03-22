@@ -7,6 +7,7 @@ const TransactionSchema = new Schema<TransactionDocument>(
     {
         date: { type: String, required: true },
         description: { type: String, required: true },
+        friendlyDescription: { type: String },
         amount: { type: Number, required: true },
         category: { type: String, required: true },
         tags: [{ type: String }],
@@ -19,10 +20,16 @@ const TransactionSchema = new Schema<TransactionDocument>(
         ],
         linkedProjectId: { type: Schema.Types.ObjectId, ref: "Project" },
         linkedAssetId: { type: Schema.Types.ObjectId, ref: "Asset" },
+        batchId: { type: Schema.Types.ObjectId, ref: "IngestionBatch" },
         source: { type: String, enum: ["manual", "csv_import"], required: true },
         processingTime: { type: String },
     },
     { timestamps: true }
 );
 
-export default mongoose.models.Transaction || mongoose.model<TransactionDocument>("Transaction", TransactionSchema);
+// Force model recompilation in development to pick up schema changes
+if (mongoose.models.Transaction) {
+    mongoose.deleteModel("Transaction");
+}
+
+export default mongoose.model<TransactionDocument>("Transaction", TransactionSchema);

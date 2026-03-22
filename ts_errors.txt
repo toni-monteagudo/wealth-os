@@ -1,0 +1,3 @@
+src/app/assets/[id]/AssetDetailClient.tsx(153,111): error TS2339: Property 'balance' does not exist on type 'ILiability'.
+src/app/assets/page.tsx(104,132): error TS2339: Property 'balance' does not exist on type 'ILiability'.
+src/components/dashboard/ActiveAssetsList.tsx(69,112): error TS2339: Property 'balance' does not exist on type 'ILiability'.

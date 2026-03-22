@@ -16,4 +16,8 @@ const ReserveSchema = new Schema<ReserveDocument>(
     { timestamps: true }
 );
 
-export default mongoose.models.Reserve || mongoose.model<ReserveDocument>("Reserve", ReserveSchema);
+if (mongoose.models.Reserve) {
+    mongoose.deleteModel("Reserve");
+}
+
+export default mongoose.model<ReserveDocument>("Reserve", ReserveSchema);

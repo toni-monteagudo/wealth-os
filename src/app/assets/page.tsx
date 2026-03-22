@@ -10,9 +10,12 @@ import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Plus } from "lucide-react";
+import { AddAssetForm } from "@/components/forms/AddAssetForm";
+import { calculateRemainingBalance } from "@/lib/utils";
 
 export default function AssetsListPage() {
-    const { data: assets, loading: loadingAssets } = useApi<IAsset[]>("/api/assets");
+    const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+    const { data: assets, loading: loadingAssets, mutate: mutateAssets } = useApi<IAsset[]>("/api/assets");
     const { data: liabilities } = useApi<ILiability[]>("/api/liabilities");
     const { t } = useI18n();
 
@@ -23,11 +26,20 @@ export default function AssetsListPage() {
     return (
         <main className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full flex flex-col gap-8">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <Building2 size={32} className="text-slate-900" /> {t("assets_list.title")}
-                </h1>
-                <p className="text-sm font-medium text-slate-500 mt-2">{t("assets_list.subtitle")}</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                        <Building2 size={32} className="text-slate-900" /> {t("assets_list.title")}
+                    </h1>
+                    <p className="text-sm font-medium text-slate-500 mt-2">{t("assets_list.subtitle")}</p>
+                </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                >
+                    <Plus size={16} />
+                    Añadir Activo
+                </button>
             </div>
 
             {/* KPI Summary */}
@@ -90,7 +102,7 @@ export default function AssetsListPage() {
                                                 </div>
                                                 <div>
                                                     <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">{t("dashboard.mortgage")}</p>
-                                                    <p className="text-rose-500 font-bold text-xl">{formatCurrency(linkedMortgage?.balance || 0)}</p>
+                                                    <p className="text-rose-500 font-bold text-xl">{formatCurrency(calculateRemainingBalance(linkedMortgage))}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
@@ -148,9 +160,15 @@ export default function AssetsListPage() {
                     title="No tienes activos registrados"
                     description="Registra tu primera propiedad inmobiliaria o negocio para comenzar a trazar tu patrimonio."
                     actionLabel="Añadir Activo"
-                    actionHref="#"
+                    onAction={() => setIsAddModalOpen(true)}
                 />
             )}
+
+            <AddAssetForm 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                onSuccess={() => mutateAssets()} 
+            />
         </main>
     );
 }

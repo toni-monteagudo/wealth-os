@@ -9,10 +9,11 @@ interface EmptyStateProps {
     description: string;
     actionLabel?: string;
     actionHref?: string;
+    onAction?: () => void;
     actionObj?: React.ReactNode;
 }
 
-export function EmptyState({ icon: Icon, title, description, actionLabel, actionHref, actionObj }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, actionLabel, actionHref, onAction, actionObj }: EmptyStateProps) {
     return (
         <PremiumCard className="flex flex-col items-center justify-center text-center py-16 px-6 relative overflow-hidden group">
             <div className="absolute inset-0 bg-slate-50/50 -z-10 group-hover:bg-slate-50/80 transition-colors" />
@@ -27,7 +28,14 @@ export function EmptyState({ icon: Icon, title, description, actionLabel, action
                 {description}
             </p>
 
-            {actionObj ? actionObj : actionHref && actionLabel ? (
+            {actionObj ? actionObj : onAction && actionLabel ? (
+                <button
+                    onClick={onAction}
+                    className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold py-3 px-6 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-md shadow-slate-900/10 flex items-center gap-2"
+                >
+                    {actionLabel}
+                </button>
+            ) : actionHref && actionLabel ? (
                 <NextLink
                     href={actionHref}
                     className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold py-3 px-6 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-md shadow-slate-900/10 flex items-center gap-2"

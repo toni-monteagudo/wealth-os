@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/start-mongo.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -10,7 +11,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.50",
-    "@ai-sdk/google": "^3.0.34",
+    "@ai-sdk/google": "^3.0.43",
     "@ai-sdk/openai": "^3.0.37",
     "ai": "^6.0.105",
     "bcryptjs": "^3.0.3",

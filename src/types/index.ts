@@ -10,11 +10,23 @@ export interface Employee {
     avatar?: string;
 }
 
+export interface RentIncrease {
+    date: string;
+    newRent: number;
+}
+
 export interface Tenant {
+    _id?: string;
     name: string;
     avatar?: string;
-    contractUntil?: string;
+    phone?: string;
+    email?: string;
+    contractStart: string;
+    contractEnd?: string;
     monthlyRent: number;
+    deposit?: number;
+    rentIncreases?: RentIncrease[];
+    notes?: string;
 }
 
 export interface IAsset {
@@ -27,7 +39,17 @@ export interface IAsset {
     purchaseDate?: string;
     area?: number;
     image?: string;
+    // Real estate specific
+    bedrooms?: number;
+    bathrooms?: number;
+    hasElevator?: boolean;
+    hasParking?: boolean;
+    yearBuilt?: number;
+    cadastralReference?: string;
+    notes?: string;
     rentalYield?: number;
+    keywords?: string[];
+    // Business specific
     mrr?: number;
     momGrowth?: number;
     employees?: Employee[];
@@ -39,8 +61,17 @@ export interface ILiability {
     _id?: string;
     name: string;
     type: LiabilityType;
-    balance: number;
-    interestRate: number;
+    initialCapital?: number;
+    startDate?: string;
+    termMonths?: number;
+    interestType?: "fixed" | "variable";
+    interestRate: number; // Legacy or fallback
+    tin?: number;
+    tae?: number;
+    lateInterestRate?: number;
+    amortizationCommission?: number;
+    cancellationCommission?: number;
+    paymentChargeDay?: number;
     monthlyPayment: number;
     bank: string;
     loanNumber?: string;
@@ -56,6 +87,7 @@ export interface ITransaction {
     _id?: string;
     date: string;
     description: string;
+    friendlyDescription?: string;
     amount: number;
     category: string;
     tags: string[];
@@ -63,6 +95,7 @@ export interface ITransaction {
     splits?: Split[];
     linkedProjectId?: string;
     linkedAssetId?: string;
+    batchId?: string;
     source: "manual" | "csv_import";
     processingTime?: string;
 }
@@ -118,6 +151,26 @@ export interface IDocument {
     url?: string;
 }
 
+// Transaction Stats (server-side aggregation)
+export interface ITransactionStats {
+    total: number;
+    needsReviewCount: number;
+    confirmedCount: number;
+    totalIncome: number;
+    totalExpenses: number;
+    netBalance: number;
+}
+
+export interface IPaginatedResponse<T> {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
 // Computed KPIs
 export interface IKPIs {
     netWorth: number;
@@ -140,4 +193,49 @@ export interface ISettings {
     _id?: string;
     activeProvider: "openai" | "anthropic" | "google";
     providers: ProviderConfig[];
+}
+
+// Categories
+export interface ICategory {
+    _id?: string;
+    name: string;
+    icon?: string;
+    color?: string;
+}
+
+// Ingestion Batch (staging for AI-processed transactions)
+export type IngestionBatchStatus = "in_review" | "completed";
+
+export interface IStagedTransaction {
+    date: string;
+    description: string;
+    friendlyDescription?: string;
+    amount: number;
+    category: string;
+    linkedAssetId?: string;
+    linkedProjectId?: string;
+    tags?: string[];
+    confirmed: boolean;
+}
+
+export interface IProcessingStats {
+    parseTimeMs: number;
+    categorizeTimeMs: number;
+    totalChunks: number;
+    retriedChunks: number;
+    fallbackChunks: number;
+}
+
+export interface IIngestionBatch {
+    _id?: string;
+    fileName?: string;
+    transactions: IStagedTransaction[];
+    suggestedCategories?: string[];
+    totalCount: number;
+    confirmedCount: number;
+    status: IngestionBatchStatus;
+    expiresAt?: Date;
+    createdAt?: Date;
+    processingStats?: IProcessingStats;
+    useOnlyExistingCategories?: boolean;
 }

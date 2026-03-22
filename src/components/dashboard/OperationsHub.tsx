@@ -33,7 +33,7 @@ export default function OperationsHub() {
             });
             if (res.ok) {
                 mutateTx();
-                router.push("/ingestion");
+                router.push("/global-position");
             }
         } catch (error) {
             console.error(error);
@@ -99,8 +99,8 @@ export default function OperationsHub() {
                                 </div>
                             </div>
                         ))}
-                        <Link href="/ingestion" className="block text-center text-xs font-bold text-accent hover:text-teal-700 p-2">
-                            Ver Hub Completo →
+                        <Link href="/global-position" className="block text-center text-xs font-bold text-accent hover:text-teal-700 p-2">
+                            Ver Posición Global →
                         </Link>
                     </div>
                 )}

@@ -19,6 +19,7 @@ export async function POST(req: Request) {
         const liability = await Liability.create(body);
         return NextResponse.json(liability, { status: 201 });
     } catch (error) {
+        console.error("Error creating liability:", error);
         return NextResponse.json({ error: "Failed to create liability" }, { status: 400 });
     }
 }

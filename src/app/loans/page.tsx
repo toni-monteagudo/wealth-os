@@ -8,29 +8,44 @@ import { useApi } from "@/hooks/useApi";
 import { ILiability, IAsset } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Plus } from "lucide-react";
+import { AddLiabilityForm } from "@/components/forms/AddLiabilityForm";
+import { calculateRemainingBalance } from "@/lib/utils";
+import { addMonths, format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function LoansPage() {
-    const { data: liabilities, loading } = useApi<ILiability[]>("/api/liabilities");
+    const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+    const { data: liabilities, loading, mutate } = useApi<ILiability[]>("/api/liabilities");
     const { t } = useI18n();
 
     const formatCurrency = (num: number) => {
         return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(num);
     };
 
-    const totalDebt = liabilities?.reduce((s, l) => s + l.balance, 0) || 0;
+    const totalDebt = liabilities?.reduce((s, l) => s + calculateRemainingBalance(l), 0) || 0;
     const totalMonthly = liabilities?.reduce((s, l) => s + l.monthlyPayment, 0) || 0;
     const avgInterest = liabilities && liabilities.length > 0
-        ? (liabilities.reduce((s, l) => s + l.interestRate, 0) / liabilities.length)
+        ? (liabilities.reduce((s, l) => s + (l.tin !== undefined ? l.tin : l.interestRate), 0) / liabilities.length)
         : 0;
 
     return (
         <main className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full flex flex-col gap-8">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <Landmark size={32} className="text-slate-900" /> {t("loans.title")}
-                </h1>
-                <p className="text-sm font-medium text-slate-500 mt-2">{t("loans.subtitle")}</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                        <Landmark size={32} className="text-slate-900" /> {t("loans.title")}
+                    </h1>
+                    <p className="text-sm font-medium text-slate-500 mt-2">{t("loans.subtitle")}</p>
+                </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                >
+                    <Plus size={16} />
+                    Añadir Préstamo
+                </button>
             </div>
 
             {/* KPI Summary */}
@@ -74,8 +89,9 @@ export default function LoansPage() {
                                         <th className="px-5 py-3 border-b border-slate-100">Nombre</th>
                                         <th className="px-5 py-3 border-b border-slate-100">{t("loans.bank")}</th>
                                         <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.balance")}</th>
-                                        <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.interest_rate")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100 text-right">TIN / TAE</th>
                                         <th className="px-5 py-3 border-b border-slate-100 text-right">{t("loans.monthly_payment")}</th>
+                                        <th className="px-5 py-3 border-b border-slate-100">Vencimiento</th>
                                         <th className="px-5 py-3 border-b border-slate-100">{t("loans.linked_asset")}</th>
                                     </tr>
                                 </thead>
@@ -93,15 +109,26 @@ export default function LoansPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <p className="font-bold text-slate-900">{liability.name}</p>
+                                                    <Link href={`/loans/${liability._id}`} className="font-bold text-slate-900 hover:text-accent transition-colors block">
+                                                        {liability.name}
+                                                    </Link>
                                                     {liability.loanNumber && (
                                                         <p className="text-[10px] text-slate-400 font-medium mt-0.5">{t("loans.loan_number")}: {liability.loanNumber}</p>
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-4 text-slate-600 font-medium">{liability.bank}</td>
-                                                <td className="px-5 py-4 text-right font-mono font-bold text-rose-600">{formatCurrency(liability.balance)}</td>
-                                                <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">{liability.interestRate}%</td>
+                                                <td className="px-5 py-4 text-right font-mono font-bold text-rose-600">{formatCurrency(calculateRemainingBalance(liability))}</td>
+                                                <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">
+                                                    {liability.tin !== undefined ? `${liability.tin}%` : `${liability.interestRate}%`}
+                                                    {liability.tae !== undefined && <span className="text-[10px] text-slate-400 font-medium ml-1">({liability.tae}%)</span>}
+                                                </td>
                                                 <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">{formatCurrency(liability.monthlyPayment)}</td>
+                                                <td className="px-5 py-4 text-slate-600 font-medium text-sm">
+                                                    {liability.startDate && liability.termMonths
+                                                        ? format(addMonths(new Date(liability.startDate), liability.termMonths), "MMM yyyy", { locale: es })
+                                                        : <span className="text-slate-400 text-xs">—</span>
+                                                    }
+                                                </td>
                                                 <td className="px-5 py-4">
                                                     {linkedAsset ? (
                                                         <Link href={`/assets/${linkedAsset._id}`} className="inline-flex items-center gap-1.5 text-accent hover:underline font-medium text-xs">
@@ -123,6 +150,7 @@ export default function LoansPage() {
                                         <td className="px-5 py-4 text-right text-slate-400 font-mono">{avgInterest.toFixed(2)}%</td>
                                         <td className="px-5 py-4 text-right text-lg text-slate-900 font-mono">{formatCurrency(totalMonthly)}</td>
                                         <td></td>
+                                        <td></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -134,12 +162,18 @@ export default function LoansPage() {
                                 title="No hay préstamos activos"
                                 description="Registra tus hipotecas y préstamos personales para tener una visión clara de tus obligaciones y amortizaciones."
                                 actionLabel="Añadir Préstamo"
-                                actionHref="#"
+                                onAction={() => setIsAddModalOpen(true)}
                             />
                         </div>
                     )}
                 </PremiumCard>
             )}
+
+            <AddLiabilityForm 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                onSuccess={() => mutate()} 
+            />
         </main>
     );
 }

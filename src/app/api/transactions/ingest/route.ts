@@ -27,26 +27,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unsupported file format" }, { status: 400 });
         }
 
-        // Map rows to Transaction model. Assuming standard bank columns: Date, Description, Amount
-        const transactions = data.map((row: any) => {
-            // Very basic AI-like auto-categorization simulation based on string matching
-            const desc = (row.Description || row.Concepto || row.Concept || "").toLowerCase();
-            let category = "UNCATEGORIZED";
-            let tags: string[] = [];
-
-            if (desc.includes("hipoteca") || desc.includes("prestamo") || desc.includes("mortgage")) {
-                category = "AMORTIZATION";
-                tags = ["HIPOTECA"];
-            } else if (desc.includes("nomina") || desc.includes("ingreso") || desc.includes("payroll")) {
-                category = "REVENUE";
-                tags = ["SALARIO"];
-            } else if (desc.includes("amazon") || desc.includes("compra")) {
-                category = "EXPENSE";
-                tags = ["COMPRAS"];
-            } else if (desc.includes("stripe")) {
-                category = "REVENUE";
-                tags = ["SAAS"];
-            }
+        const transactions = [];
+        for (const row of data) {
+            const rawDescription = (row.Description || row.Concepto || row.Concept || "Unknown").trim();
+            const date = row.Date || row.Fecha || new Date().toISOString();
 
             // Handle European number formats e.g. "1.245,00" -> -1245
             let amountStr = row.Amount || row.Importe || "0";
@@ -55,17 +39,50 @@ export async function POST(req: Request) {
             }
             const amount = parseFloat(amountStr);
 
-            return {
-                date: row.Date || row.Fecha || new Date().toISOString(),
-                description: row.Description || row.Concepto || row.Concept || "Unknown",
+            // Very basic auto-categorization fallback
+            const descLower = rawDescription.toLowerCase();
+            let category = "UNCATEGORIZED";
+            let tags: string[] = [];
+            let linkedAssetId = undefined;
+
+            if (descLower.includes("hipoteca") || descLower.includes("prestamo") || descLower.includes("mortgage")) {
+                category = "AMORTIZATION";
+                tags = ["HIPOTECA"];
+            } else if (descLower.includes("nomina") || descLower.includes("ingreso") || descLower.includes("payroll")) {
+                category = "REVENUE";
+                tags = ["SALARIO"];
+            } else if (descLower.includes("amazon") || descLower.includes("compra")) {
+                category = "EXPENSE";
+                tags = ["COMPRAS"];
+            } else if (descLower.includes("stripe")) {
+                category = "REVENUE";
+                tags = ["SAAS"];
+            }
+
+            // AI-like historical pre-assignment (lookup previous transaction with same description)
+            const historicalTx = await Transaction.findOne({
+                description: rawDescription,
+                category: { $ne: "UNCATEGORIZED" }
+            }).sort({ date: -1, createdAt: -1 });
+
+            if (historicalTx) {
+                category = historicalTx.category;
+                tags = historicalTx.tags || [];
+                linkedAssetId = historicalTx.linkedAssetId;
+            }
+
+            transactions.push({
+                date,
+                description: rawDescription,
                 amount: isNaN(amount) ? 0 : amount,
                 category,
                 tags,
-                status: "needs_review", // Always land in review queue
+                status: "needs_review",
+                linkedAssetId,
                 source: "csv_import",
                 processingTime: "Just now",
-            };
-        });
+            });
+        }
 
         const inserted = await Transaction.insertMany(transactions);
 
