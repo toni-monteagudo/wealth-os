@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, ImagePlus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { FormField } from "@/components/ui/FormField";
 import { IAsset } from "@/types";
@@ -18,6 +18,7 @@ const INITIAL_STATE: Partial<IAsset> = {
     purchasePrice: 0,
     purchaseDate: "",
     location: "",
+    image: "",
     area: undefined,
     bedrooms: undefined,
     bathrooms: undefined,
@@ -27,12 +28,22 @@ const INITIAL_STATE: Partial<IAsset> = {
     cadastralReference: "",
     notes: "",
     keywords: [],
-    mrr: 0,
 };
 
 export function AddAssetForm({ isOpen, onClose, onSuccess }: AddAssetFormProps) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<Partial<IAsset>>(INITIAL_STATE);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFormData(prev => ({ ...prev, image: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -102,23 +113,33 @@ export function AddAssetForm({ isOpen, onClose, onSuccess }: AddAssetFormProps) 
                     required
                 />
                 
-                <div className="grid grid-cols-2 gap-4">
+                {isRealEstate ? (
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            label="Valor de Compra (€)"
+                            name="purchasePrice"
+                            type="number"
+                            value={formData.purchasePrice || ""}
+                            onChange={handleChange}
+                            required
+                        />
+                        <FormField
+                            label="Fecha de Compra"
+                            name="purchaseDate"
+                            type="date"
+                            value={formData.purchaseDate || ""}
+                            onChange={handleChange}
+                        />
+                    </div>
+                ) : (
                     <FormField
-                        label="Valor de Compra (€)"
-                        name="purchasePrice"
-                        type="number"
-                        value={formData.purchasePrice || ""}
-                        onChange={handleChange}
-                        required
-                    />
-                    <FormField
-                        label="Fecha de Compra"
+                        label="Fecha de Inicio"
                         name="purchaseDate"
                         type="date"
                         value={formData.purchaseDate || ""}
                         onChange={handleChange}
                     />
-                </div>
+                )}
 
                 <FormField
                     label="Ubicación"
@@ -127,6 +148,33 @@ export function AddAssetForm({ isOpen, onClose, onSuccess }: AddAssetFormProps) 
                     onChange={handleChange}
                     placeholder="Ej. Calle Mayor 5, Madrid"
                 />
+
+                {/* Image Upload */}
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Imagen de Portada</label>
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageFile} className="hidden" />
+                    {formData.image ? (
+                        <div className="relative rounded-xl overflow-hidden h-36 bg-slate-100">
+                            <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                            <button
+                                type="button"
+                                onClick={() => { setFormData(prev => ({ ...prev, image: "" })); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                                className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors shadow-lg"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full h-24 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:border-slate-300 hover:text-slate-500 hover:bg-slate-50 transition-colors"
+                        >
+                            <ImagePlus size={20} />
+                            <span className="text-xs font-medium">Haz clic para subir una imagen</span>
+                        </button>
+                    )}
+                </div>
 
                 {isRealEstate && (
                     <>
@@ -201,25 +249,16 @@ export function AddAssetForm({ isOpen, onClose, onSuccess }: AddAssetFormProps) 
                             </label>
                         </div>
 
-                        <FormField
-                            label="Notas (opcional)"
-                            name="notes"
-                            value={formData.notes || ""}
-                            onChange={handleChange}
-                            placeholder="Ej. Reformado en 2020, orientación sur..."
-                        />
                     </>
                 )}
 
-                {formData.type === "business" && (
-                    <FormField
-                        label="MRR (€)"
-                        name="mrr"
-                        type="number"
-                        value={formData.mrr || ""}
-                        onChange={handleChange}
-                    />
-                )}
+                <FormField
+                    label="Notas (opcional)"
+                    name="notes"
+                    value={formData.notes || ""}
+                    onChange={handleChange}
+                    placeholder="Ej. Notas sobre el activo..."
+                />
 
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Palabras Clave (para auto-asignación IA)</label>

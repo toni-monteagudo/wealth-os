@@ -174,10 +174,18 @@ export default function AssetDetailClient() {
     // Capital gain
     const capitalGain = asset.value - (asset.purchasePrice || 0);
 
-    // Net yield from financials
-    const netYield = currentFinancials && asset.purchasePrice
-        ? ((currentFinancials.totalIncome + currentFinancials.totalExpenses) / asset.purchasePrice) * 100
-        : 0;
+    // Net yield / margin from financials
+    const netYield = (() => {
+        if (!currentFinancials) return 0;
+        if (asset.type === 'business') {
+            return currentFinancials.totalIncome > 0
+                ? (currentFinancials.cashFlow / currentFinancials.totalIncome) * 100
+                : 0;
+        }
+        return asset.purchasePrice
+            ? ((currentFinancials.totalIncome + currentFinancials.totalExpenses) / asset.purchasePrice) * 100
+            : 0;
+    })();
 
     const openAddTenant = () => {
         setEditingTenant(undefined);
@@ -198,8 +206,8 @@ export default function AssetDetailClient() {
             <div
                 className="h-64 md:h-80 w-full rounded-3xl relative overflow-hidden flex items-end p-8"
                 style={{
-                    backgroundImage: asset.type === 'real_estate' && asset.image ? `url('${asset.image}')` : 'none',
-                    backgroundColor: asset.type === 'business' ? '#4f46e5' : '#e2e8f0',
+                    backgroundImage: asset.image ? `url('${asset.image}')` : 'none',
+                    backgroundColor: asset.image ? undefined : (asset.type === 'business' ? '#4f46e5' : '#e2e8f0'),
                     backgroundSize: 'cover',
                     backgroundPosition: 'center'
                 }}
@@ -271,32 +279,32 @@ export default function AssetDetailClient() {
 
                 {/* Main Stats Column */}
                 <div className="lg:col-span-2 flex flex-col gap-6">
-                    {/* Top stats row */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <PremiumCard>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.current_valuation")}</p>
-                            <p className="text-2xl font-bold text-slate-900">{formatCurrency(asset.value)}</p>
-                        </PremiumCard>
-                        <PremiumCard>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.purchase_price")}</p>
-                            <p className="text-2xl font-bold text-slate-600">{formatCurrency(asset.purchasePrice || 0)}</p>
-                        </PremiumCard>
-                        <PremiumCard>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.gross_capital_gain")}</p>
-                            <p className={`text-2xl font-bold ${capitalGain >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                                {capitalGain >= 0 ? "+" : ""}{formatCurrency(capitalGain)}
-                            </p>
-                        </PremiumCard>
-                        {asset.type === 'real_estate' && (
+                    {/* Top stats row — Real Estate only */}
+                    {asset.type === 'real_estate' && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <PremiumCard>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.current_valuation")}</p>
+                                <p className="text-2xl font-bold text-slate-900">{formatCurrency(asset.value)}</p>
+                            </PremiumCard>
+                            <PremiumCard>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.purchase_price")}</p>
+                                <p className="text-2xl font-bold text-slate-600">{formatCurrency(asset.purchasePrice || 0)}</p>
+                            </PremiumCard>
+                            <PremiumCard>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{t("asset_detail.gross_capital_gain")}</p>
+                                <p className={`text-2xl font-bold ${capitalGain >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                    {capitalGain >= 0 ? "+" : ""}{formatCurrency(capitalGain)}
+                                </p>
+                            </PremiumCard>
                             <PremiumCard>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><Maximize size={10} /> {t("asset_detail.area")}</p>
                                 <p className="text-2xl font-bold text-slate-900">{asset.area} <span className="text-sm font-medium text-slate-400">m²</span></p>
                             </PremiumCard>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                     {/* Year selector + KPIs from financials */}
-                    {asset.type === 'real_estate' && currentFinancials && (
+                    {currentFinancials && (
                         <>
                             {/* Year Selector Tabs */}
                             <div className="flex items-center gap-2 flex-wrap">
@@ -340,7 +348,7 @@ export default function AssetDetailClient() {
                                     <p className={`text-2xl font-bold ${currentFinancials.cashFlow >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatCurrency(currentFinancials.cashFlow)}</p>
                                 </PremiumCard>
                                 <PremiumCard className={netYield >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}>
-                                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1 ${netYield >= 0 ? "text-emerald-600" : "text-rose-600"}`}><PercentIcon size={10} /> Rentabilidad Neta</p>
+                                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1 ${netYield >= 0 ? "text-emerald-600" : "text-rose-600"}`}><PercentIcon size={10} /> {asset.type === 'business' ? 'Margen Neto' : 'Rentabilidad Neta'}</p>
                                     <p className={`text-2xl font-bold ${netYield >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{netYield.toFixed(2)}%</p>
                                 </PremiumCard>
                             </div>
@@ -348,7 +356,7 @@ export default function AssetDetailClient() {
                     )}
 
                     {/* Charts Section */}
-                    {asset.type === 'real_estate' && financials && barChartData.length > 0 && (
+                    {financials && barChartData.length > 0 && (
                         <div className="flex flex-col gap-6">
                             {/* Income vs Expenses Bar Chart */}
                             <PremiumCard>
@@ -725,13 +733,6 @@ export default function AssetDetailClient() {
                         <LinkIcon size={16} /> Vincular Préstamo
                     </button>
 
-                    {asset.type === 'business' && (
-                        <PremiumCard className="bg-indigo-50 border-indigo-100">
-                            <h3 className="text-indigo-900 font-bold text-lg mb-4">{t("dashboard.mrr")} Overview</h3>
-                            <p className="text-4xl font-bold text-indigo-700 mb-2">${asset.mrr?.toLocaleString()}</p>
-                            <p className="text-indigo-600/80 text-sm font-medium">Monthly Recurring Revenue</p>
-                        </PremiumCard>
-                    )}
                 </div>
             </div>
         </div>

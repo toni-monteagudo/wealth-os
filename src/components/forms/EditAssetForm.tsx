@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, ImagePlus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { FormField } from "@/components/ui/FormField";
 import { IAsset } from "@/types";
@@ -16,6 +16,17 @@ interface EditAssetFormProps {
 export function EditAssetForm({ isOpen, onClose, onSuccess, asset }: EditAssetFormProps) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<Partial<IAsset>>({});
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFormData(prev => ({ ...prev, image: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -35,9 +46,9 @@ export function EditAssetForm({ isOpen, onClose, onSuccess, asset }: EditAssetFo
                 hasParking: asset.hasParking || false,
                 yearBuilt: asset.yearBuilt,
                 cadastralReference: asset.cadastralReference || "",
+                image: asset.image || "",
                 notes: asset.notes || "",
                 keywords: asset.keywords || [],
-                mrr: asset.mrr || 0,
             });
         }
     }, [isOpen, asset]);
@@ -86,28 +97,30 @@ export function EditAssetForm({ isOpen, onClose, onSuccess, asset }: EditAssetFo
                     required
                 />
                 
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                        label="Valor Actual (€)"
-                        name="value"
-                        type="number"
-                        value={formData.value || ""}
-                        onChange={handleChange}
-                        required
-                    />
-                    <FormField
-                        label="Valor de Compra (€)"
-                        name="purchasePrice"
-                        type="number"
-                        value={formData.purchasePrice || ""}
-                        onChange={handleChange}
-                        required
-                    />
-                </div>
+                {isRealEstate && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            label="Valor Actual (€)"
+                            name="value"
+                            type="number"
+                            value={formData.value || ""}
+                            onChange={handleChange}
+                            required
+                        />
+                        <FormField
+                            label="Valor de Compra (€)"
+                            name="purchasePrice"
+                            type="number"
+                            value={formData.purchasePrice || ""}
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
-                        label="Fecha de Compra"
+                        label={isRealEstate ? "Fecha de Compra" : "Fecha de Inicio"}
                         name="purchaseDate"
                         type="date"
                         value={formData.purchaseDate || ""}
@@ -120,6 +133,33 @@ export function EditAssetForm({ isOpen, onClose, onSuccess, asset }: EditAssetFo
                         onChange={handleChange}
                         placeholder="Ej. Madrid, España"
                     />
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Imagen de Portada</label>
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageFile} className="hidden" />
+                    {formData.image ? (
+                        <div className="relative rounded-xl overflow-hidden h-36 bg-slate-100">
+                            <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                            <button
+                                type="button"
+                                onClick={() => { setFormData(prev => ({ ...prev, image: "" })); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                                className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors shadow-lg"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full h-24 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:border-slate-300 hover:text-slate-500 hover:bg-slate-50 transition-colors"
+                        >
+                            <ImagePlus size={20} />
+                            <span className="text-xs font-medium">Haz clic para subir una imagen</span>
+                        </button>
+                    )}
                 </div>
 
                 {isRealEstate && (
@@ -190,16 +230,6 @@ export function EditAssetForm({ isOpen, onClose, onSuccess, asset }: EditAssetFo
                             </label>
                         </div>
                     </>
-                )}
-
-                {formData.type === "business" && (
-                    <FormField
-                        label="MRR (€)"
-                        name="mrr"
-                        type="number"
-                        value={formData.mrr || ""}
-                        onChange={handleChange}
-                    />
                 )}
 
                 <div>
