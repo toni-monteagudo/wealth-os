@@ -81,22 +81,28 @@ function parseDate(raw: string | undefined | null): string | null {
     const trimmed = raw.toString().trim();
     if (!trimmed) return null;
 
+    // Strip time components (e.g., "2026-03-18 20:07:00" → "2026-03-18", "18/3/26, 20:07" → "18/3/26")
+    const dateOnly = trimmed
+        .replace(/[,\s]+\d{1,2}:\d{2}(:\d{2})?.*$/, "")
+        .trim();
+    if (!dateOnly) return null;
+
     // YYYY-MM-DD (already ISO)
-    const isoMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    const isoMatch = dateOnly.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
     if (isoMatch) {
         const [, y, m, d] = isoMatch;
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
     // DD/MM/YYYY or DD-MM-YYYY
-    const dmy4 = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    const dmy4 = dateOnly.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
     if (dmy4) {
         const [, d, m, y] = dmy4;
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
     // DD/MM/YY
-    const dmy2 = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+    const dmy2 = dateOnly.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
     if (dmy2) {
         const [, d, m, yy] = dmy2;
         const y = parseInt(yy) > 50 ? `19${yy}` : `20${yy}`;

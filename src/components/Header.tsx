@@ -21,7 +21,6 @@ export function Header() {
         { href: "/documents", label: t("nav.documents") },
         { href: "/loans", label: t("nav.loans") },
         { href: "/global-position", label: t("nav.global_position") },
-        { href: "/ingestion", label: t("nav.ai_ingestion") },
     ];
 
     return (

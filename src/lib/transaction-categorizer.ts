@@ -10,8 +10,6 @@ const chunkCategorizationSchema = z.object({
         category: z.string().describe("Category for this transaction. Use one of the provided categories when possible. If none fits well, assign a new descriptive category name (uppercase, no accents, e.g. FARMACIA, MASCOTAS) and also add it to suggestedNewCategories."),
         friendlyDescription: z.string().describe("A short, clean, human-friendly description of this transaction. Simplify cryptic bank codes into readable text. E.g. '0057950 FACEBOOK IRELAND LTD' → 'Facebook Ads', 'BIZUM ENVI A JUAN PEREZ' → 'Bizum a Juan Pérez', 'RECIBO LUZ IBERDROLA' → 'Recibo Iberdrola (luz)'. Keep the original meaning, just make it readable."),
         linkedAssetId: z.string().optional().describe("ID of the linked asset if the transaction clearly corresponds to one. Use the exact ID from the portfolio list."),
-        suggestDeletion: z.boolean().optional().describe("Set to true if this transaction looks like noise that should be deleted: inter-account transfers (traspasos entre cuentas propias), internal bank movements, duplicate charges that cancel out, zero-amount entries, or other non-meaningful entries. The user will review and confirm before anything is deleted."),
-        deletionReason: z.string().optional().describe("If suggestDeletion is true, briefly explain why in Spanish (e.g. 'Traspaso entre cuentas propias', 'Movimiento interno bancario', 'Entrada duplicada')."),
     })),
     suggestedNewCategories: z.array(z.string()).optional().describe("New category suggestions not in the existing list. Uppercase, no accents (e.g. FARMACIA, MASCOTAS). Only suggest if truly needed."),
 });
@@ -38,8 +36,6 @@ export interface CategorizedTransaction {
     amount: number;
     category: string;
     linkedAssetId?: string;
-    pendingDeletion?: boolean;
-    deletionReason?: string;
 }
 
 export interface CategorizationResult {
@@ -52,7 +48,8 @@ function buildChunkPrompt(
     chunk: { index: number; date: string; description: string; amount: number }[],
     categoryNames: string[],
     portfolioContext: string,
-    isRetry: boolean
+    isRetry: boolean,
+    useOnlyExistingCategories: boolean = false
 ): string {
     const txList = chunk.map(t =>
         `  {index: ${t.index}, date: "${t.date}", description: "${t.description}", amount: ${t.amount}}`
@@ -68,9 +65,13 @@ ${txList}
 AVAILABLE CATEGORIES: ${categoryNames.join(", ")}
 
 CATEGORY RULES:
-- Use an existing category whenever possible.
+${useOnlyExistingCategories
+? `- You MUST ONLY use categories from the AVAILABLE CATEGORIES list above. Do NOT invent or suggest any new categories.
+- If no existing category fits well, assign OTROS.
+- Do NOT add anything to suggestedNewCategories.`
+: `- Use an existing category whenever possible.
 - If no existing category fits, assign a NEW category name directly to the transaction (uppercase, no accents, e.g. FARMACIA, MASCOTAS) AND add it to suggestedNewCategories.
-- Do NOT use OTROS when a more specific new category would be better. Only use OTROS as a last resort when no meaningful category can be determined.
+- Do NOT use OTROS when a more specific new category would be better. Only use OTROS as a last resort when no meaningful category can be determined.`}
 
 FRIENDLY DESCRIPTION RULES:
 For each transaction, generate a short, clean, human-readable "friendlyDescription" from the raw bank description.
@@ -85,14 +86,7 @@ For each transaction, generate a short, clean, human-readable "friendlyDescripti
   "COMISION MANTENIMIENTO CUENTA" → "Comisión mantenimiento cuenta"
 - The friendlyDescription MUST NOT be empty. If the description is already clean, use it as-is.
 
-DELETION SUGGESTION RULES:
-- Set suggestDeletion=true for transactions that are likely noise and should be reviewed for deletion:
-  * Inter-account transfers (traspasos entre cuentas propias del usuario, e.g. "TRASPASO", "TRANSFERENCIA A CUENTA PROPIA", "TRASPASO PERIODICO")
-  * Internal bank movements that don't represent real income or expenses
-  * Zero-amount entries or placeholder transactions
-- Do NOT suggest deletion for real expenses, income, loan payments, or meaningful transactions
-- When suggestDeletion=true, always provide a deletionReason in Spanish explaining why
-- When in doubt, do NOT suggest deletion — the user can always mark them manually`;
+`;
 
     if (portfolioContext) {
         prompt += `\n\nWhen a transaction clearly corresponds to a portfolio asset, set linkedAssetId. Match by: keywords in description, rent income matching tenant monthlyRent, or loan payments matching monthly payment.${portfolioContext}`;
@@ -110,7 +104,8 @@ async function categorizeChunk(
     model: any,
     categoryNames: string[],
     portfolioContext: string,
-): Promise<{ categorized: Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string; pendingDeletion?: boolean; deletionReason?: string }>; suggested: string[]; retried: boolean; fallback: boolean }> {
+    useOnlyExistingCategories: boolean = false,
+): Promise<{ categorized: Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>; suggested: string[]; retried: boolean; fallback: boolean }> {
     const systemPrompt = `You are a financial transaction categorizer. For each transaction, assign a category, generate a short human-friendly description, and optionally link to a portfolio asset. Return EXACTLY ${chunk.length} results, one per input transaction, preserving the index field.`;
 
     let retried = false;
@@ -124,13 +119,13 @@ async function categorizeChunk(
                 system: systemPrompt,
                 messages: [{
                     role: "user",
-                    content: [{ type: "text", text: buildChunkPrompt(chunk, categoryNames, portfolioContext, attempt > 0) }],
+                    content: [{ type: "text", text: buildChunkPrompt(chunk, categoryNames, portfolioContext, attempt > 0, useOnlyExistingCategories) }],
                 }],
             });
 
-            const resultMap = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string; pendingDeletion?: boolean; deletionReason?: string }>();
+            const resultMap = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>();
             for (const t of object.transactions) {
-                resultMap.set(t.index, { category: t.category, friendlyDescription: t.friendlyDescription, linkedAssetId: t.linkedAssetId, pendingDeletion: t.suggestDeletion, deletionReason: t.deletionReason });
+                resultMap.set(t.index, { category: t.category, friendlyDescription: t.friendlyDescription, linkedAssetId: t.linkedAssetId });
             }
 
             if (resultMap.size === chunk.length) {
@@ -171,7 +166,7 @@ async function categorizeChunk(
             }
 
             // Persistent failure — fallback entire chunk
-            const resultMap = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string; pendingDeletion?: boolean; deletionReason?: string }>();
+            const resultMap = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>();
             for (const c of chunk) {
                 resultMap.set(c.index, { category: "OTROS" });
             }
@@ -194,6 +189,7 @@ export async function categorizeInChunks(
     portfolioContext: string,
     onChunkComplete?: (progress: ChunkProgress) => void,
     chunkSize: number = CHUNK_SIZE,
+    useOnlyExistingCategories: boolean = false,
 ): Promise<CategorizationResult> {
     const indexed = transactions.map((tx, i) => ({ index: i, ...tx }));
     const chunks: typeof indexed[] = [];
@@ -202,7 +198,7 @@ export async function categorizeInChunks(
         chunks.push(indexed.slice(i, i + chunkSize));
     }
 
-    const allCategorized = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string; pendingDeletion?: boolean; deletionReason?: string }>();
+    const allCategorized = new Map<number, { category: string; friendlyDescription?: string; linkedAssetId?: string }>();
     const allSuggested = new Set<string>();
     const stats: CategorizationStats = {
         totalChunks: chunks.length,
@@ -214,7 +210,7 @@ export async function categorizeInChunks(
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
 
-        const result = await categorizeChunk(chunk, model, categoryNames, portfolioContext);
+        const result = await categorizeChunk(chunk, model, categoryNames, portfolioContext, useOnlyExistingCategories);
 
         for (const [index, cat] of result.categorized) {
             allCategorized.set(index, cat);
@@ -246,8 +242,6 @@ export async function categorizeInChunks(
             amount: tx.amount,
             category: cat.category,
             linkedAssetId: cat.linkedAssetId,
-            pendingDeletion: cat.pendingDeletion,
-            deletionReason: cat.deletionReason,
         };
     });
 

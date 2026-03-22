@@ -4,6 +4,11 @@ import dbConnect from "@/lib/mongodb";
 import IngestionBatch from "@/models/IngestionBatch";
 import Transaction from "@/models/Transaction";
 
+function validObjectId(value: unknown): string | undefined {
+    if (!value || typeof value !== "string") return undefined;
+    return mongoose.Types.ObjectId.isValid(value) ? value : undefined;
+}
+
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     await dbConnect();
     try {
@@ -15,23 +20,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             return NextResponse.json({ error: "Batch not found" }, { status: 404 });
         }
 
-        // Filter out transactions marked for deletion — only insert the rest
-        const transactionsToInsert = transactions
-            .filter((tx: any) => !tx.pendingDeletion)
-            .map((tx: any) => ({
-                date: tx.date,
-                description: tx.description,
-                friendlyDescription: tx.friendlyDescription || undefined,
-                amount: tx.amount,
-                category: tx.category,
-                tags: tx.tags || [],
-                linkedAssetId: tx.linkedAssetId || undefined,
-                linkedProjectId: tx.linkedProjectId || undefined,
-                batchId: new mongoose.Types.ObjectId(id),
-                status: "confirmed",
-                source: "csv_import",
-                processingTime: "Just now",
-            }));
+        const transactionsToInsert = transactions.map((tx: any) => ({
+            date: tx.date,
+            description: tx.description,
+            friendlyDescription: tx.friendlyDescription || undefined,
+            amount: tx.amount,
+            category: tx.category,
+            tags: tx.tags || [],
+            linkedAssetId: validObjectId(tx.linkedAssetId),
+            linkedProjectId: validObjectId(tx.linkedProjectId),
+            batchId: new mongoose.Types.ObjectId(id),
+            status: "confirmed",
+            source: "csv_import",
+            processingTime: "Just now",
+        }));
 
         if (transactionsToInsert.length > 0) {
             await Transaction.insertMany(transactionsToInsert);
@@ -42,9 +44,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         for (let i = 0; i < transactions.length; i++) {
             const batchIdx = startIdx + i;
             if (batchIdx < batch.transactions.length) {
-                const isPendingDeletion = !!transactions[i].pendingDeletion;
-                batch.transactions[batchIdx].confirmed = !isPendingDeletion;
-                batch.transactions[batchIdx].pendingDeletion = isPendingDeletion;
+                batch.transactions[batchIdx].confirmed = true;
                 batch.transactions[batchIdx].category = transactions[i].category;
                 batch.transactions[batchIdx].friendlyDescription = transactions[i].friendlyDescription;
                 batch.transactions[batchIdx].linkedAssetId = transactions[i].linkedAssetId;
@@ -52,17 +52,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             }
         }
 
-        // Count confirmed (excluding pending deletion)
         batch.confirmedCount = batch.transactions.filter(
-            (t: any) => t.confirmed && !t.pendingDeletion
+            (t: any) => t.confirmed
         ).length;
 
-        // Batch is complete when all transactions are either confirmed or pending deletion
-        const processedCount = batch.transactions.filter(
-            (t: any) => t.confirmed || t.pendingDeletion
-        ).length;
-
-        if (processedCount >= batch.totalCount) {
+        if (batch.confirmedCount >= batch.totalCount) {
             batch.status = "completed";
             batch.expiresAt = undefined;
         }

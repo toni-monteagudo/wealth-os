@@ -145,7 +145,7 @@ async function handleLoanDocument(buffer: Buffer, mimeType: string, model: any):
 }
 
 // ── STATEMENT HANDLER (new chunked pipeline with SSE) ──
-async function handleStatement(file: File, buffer: Buffer, mimeType: string, model: any, userContext: string = ""): Promise<Response> {
+async function handleStatement(file: File, buffer: Buffer, mimeType: string, model: any, userContext: string = "", useOnlyExistingCategories: boolean = false): Promise<Response> {
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -227,6 +227,8 @@ async function handleStatement(file: File, buffer: Buffer, mimeType: string, mod
                     (progress) => {
                         controller.enqueue(encoder.encode(sseEvent(progress)));
                     },
+                    undefined,
+                    useOnlyExistingCategories,
                 );
 
                 const categorizeTimeMs = Date.now() - categorizeStart;
@@ -258,43 +260,12 @@ async function handleStatement(file: File, buffer: Buffer, mimeType: string, mod
                     })
                 );
 
-                // ── PHASE 3b: Duplicate detection ──
-                // Detect potential duplicates: same date + same absolute amount + different description
-                const seen = new Map<string, number[]>();
-                for (let i = 0; i < enrichedTransactions.length; i++) {
-                    const tx = enrichedTransactions[i];
-                    const key = `${tx.date}|${Math.abs(tx.amount).toFixed(2)}`;
-                    if (!seen.has(key)) seen.set(key, []);
-                    seen.get(key)!.push(i);
-                }
-
-                for (const [, indices] of seen) {
-                    if (indices.length < 2) continue;
-                    // Check if there's a pair with opposite signs (transfer pattern)
-                    for (let a = 0; a < indices.length; a++) {
-                        for (let b = a + 1; b < indices.length; b++) {
-                            const txA = enrichedTransactions[indices[a]];
-                            const txB = enrichedTransactions[indices[b]];
-                            if (txA.amount > 0 && txB.amount < 0 || txA.amount < 0 && txB.amount > 0) {
-                                // Opposite signs, same date, same absolute amount → likely inter-account transfer
-                                if (!txA.pendingDeletion) {
-                                    txA.pendingDeletion = true;
-                                    txA.deletionReason = txA.deletionReason || "Posible traspaso entre cuentas (mismo día, mismo importe, signos opuestos)";
-                                }
-                                if (!txB.pendingDeletion) {
-                                    txB.pendingDeletion = true;
-                                    txB.deletionReason = txB.deletionReason || "Posible traspaso entre cuentas (mismo día, mismo importe, signos opuestos)";
-                                }
-                            }
-                        }
-                    }
-                }
-
                 // ── PHASE 4: Create IngestionBatch ──
                 const batch = await IngestionBatch.create({
                     fileName: file.name,
                     transactions: enrichedTransactions,
                     suggestedCategories: categorizationResult.suggestedNewCategories,
+                    useOnlyExistingCategories,
                     totalCount: enrichedTransactions.length,
                     confirmedCount: 0,
                     status: "in_review",
@@ -346,6 +317,7 @@ export async function POST(req: Request) {
         const file = formData.get("file") as File;
         const type = formData.get("type") as "statement" | "loan";
         const userContext = (formData.get("userContext") as string) || "";
+        const useOnlyExistingCategories = formData.get("useOnlyExistingCategories") === "true";
 
         if (!file) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -363,7 +335,7 @@ export async function POST(req: Request) {
             return handleLoanDocument(buffer, mimeType, model);
         }
 
-        return handleStatement(file, buffer, mimeType, model, userContext);
+        return handleStatement(file, buffer, mimeType, model, userContext, useOnlyExistingCategories);
 
     } catch (error: any) {
         console.error("AI Ingestion Error:", error);

@@ -14,8 +14,6 @@ const StagedTransactionSchema = new Schema(
         linkedProjectId: { type: String },
         tags: [{ type: String }],
         confirmed: { type: Boolean, default: false },
-        pendingDeletion: { type: Boolean, default: false },
-        deletionReason: { type: String },
     },
     { _id: false }
 );
@@ -25,6 +23,7 @@ const IngestionBatchSchema = new Schema<IngestionBatchDocument>(
         fileName: { type: String },
         transactions: [StagedTransactionSchema],
         suggestedCategories: [{ type: String }],
+        useOnlyExistingCategories: { type: Boolean, default: false },
         totalCount: { type: Number, required: true },
         confirmedCount: { type: Number, default: 0 },
         status: { type: String, enum: ["in_review", "completed"], default: "in_review" },

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, Loader2, Plus, X, Trash2, RotateCcw, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, Loader2, Plus, X } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { useApi } from "@/hooks/useApi";
@@ -44,11 +44,6 @@ export default function ReviewClient() {
     const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set());
     const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
-    // Pending deletion overrides: batch-index -> true (mark for deletion) | false (restore)
-    // undefined = use the original AI flag from the batch data
-    const [deletionOverrides, setDeletionOverrides] = useState<Map<number, boolean>>(new Map());
-    const [deletionSectionExpanded, setDeletionSectionExpanded] = useState(true);
-
     const totalPages = batch ? Math.ceil(batch.totalCount / PAGE_SIZE) : 0;
     const isLastPage = pageParam >= totalPages;
 
@@ -59,59 +54,6 @@ export default function ReviewClient() {
     const pendingSuggestions = (batch?.suggestedCategories || []).filter(
         s => !acceptedSuggestions.has(s) && !dismissedSuggestions.has(s) && !categoryNames.includes(s)
     );
-
-    // Check if a batch-level transaction is pending deletion
-    const isTxPendingDeletion = useCallback((batchIndex: number): boolean => {
-        const override = deletionOverrides.get(batchIndex);
-        if (override !== undefined) return override;
-        return batch?.transactions[batchIndex]?.pendingDeletion || false;
-    }, [deletionOverrides, batch]);
-
-    // Get deletion reason for a batch-level transaction
-    const getTxDeletionReason = useCallback((batchIndex: number): string => {
-        const override = deletionOverrides.get(batchIndex);
-        if (override === true) return "Marcada manualmente para eliminar";
-        if (override === false) return "";
-        return batch?.transactions[batchIndex]?.deletionReason || "";
-    }, [deletionOverrides, batch]);
-
-    // Count total pending deletions across the entire batch
-    const totalPendingDeletions = useMemo(() => {
-        if (!batch) return 0;
-        let count = 0;
-        for (let i = 0; i < batch.transactions.length; i++) {
-            if (isTxPendingDeletion(i)) count++;
-        }
-        return count;
-    }, [batch, isTxPendingDeletion]);
-
-    // Get the current page's slice with batch indices
-    const pageSliceWithIndices = useMemo(() => {
-        if (!batch?.transactions) return [];
-        const start = pageIndex * PAGE_SIZE;
-        const end = start + PAGE_SIZE;
-        return batch.transactions.slice(start, end).map((tx, localIdx) => ({
-            tx,
-            batchIndex: start + localIdx,
-            localIdx,
-        }));
-    }, [batch, pageIndex]);
-
-    // Split current page into active and pending deletion
-    const { activeItems, deletionItems } = useMemo(() => {
-        const active: { tx: IStagedTransaction; batchIndex: number; localIdx: number }[] = [];
-        const deletion: { tx: IStagedTransaction; batchIndex: number; localIdx: number }[] = [];
-
-        for (const item of pageSliceWithIndices) {
-            if (isTxPendingDeletion(item.batchIndex)) {
-                deletion.push(item);
-            } else {
-                active.push(item);
-            }
-        }
-
-        return { activeItems: active, deletionItems: deletion };
-    }, [pageSliceWithIndices, isTxPendingDeletion]);
 
     useEffect(() => {
         if (!batch?.transactions) return;
@@ -165,22 +107,6 @@ export default function ReviewClient() {
         });
     }, []);
 
-    const handleMarkForDeletion = useCallback((batchIndex: number) => {
-        setDeletionOverrides(prev => {
-            const next = new Map(prev);
-            next.set(batchIndex, true);
-            return next;
-        });
-    }, []);
-
-    const handleRestoreFromDeletion = useCallback((batchIndex: number) => {
-        setDeletionOverrides(prev => {
-            const next = new Map(prev);
-            next.set(batchIndex, false);
-            return next;
-        });
-    }, []);
-
     const handleAcceptSuggestion = async (name: string) => {
         try {
             await fetch("/api/categories", {
@@ -204,20 +130,13 @@ export default function ReviewClient() {
         setIsSaving(true);
 
         try {
-            // Send transactions WITH their pendingDeletion status
-            const start = pageIndex * PAGE_SIZE;
-            const txsWithDeletionFlag = pageTransactions.map((tx, localIdx) => ({
-                ...tx,
-                pendingDeletion: isTxPendingDeletion(start + localIdx),
-            }));
-
             const res = await fetch(`/api/ingestion/batches/${batchId}/confirm`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     pageIndex,
                     pageSize: PAGE_SIZE,
-                    transactions: txsWithDeletionFlag,
+                    transactions: pageTransactions,
                 }),
             });
 
@@ -226,10 +145,10 @@ export default function ReviewClient() {
             const result = await res.json();
 
             if (isLastPage || result.status === "completed") {
-                router.push("/ingestion");
+                router.push("/global-position");
             } else {
                 await mutate();
-                router.push(`/ingestion/review?batchId=${batchId}&page=${pageParam + 1}`);
+                router.push(`/global-position/review?batchId=${batchId}&page=${pageParam + 1}`);
             }
         } catch (error) {
             console.error(error);
@@ -244,30 +163,11 @@ export default function ReviewClient() {
     const handleConfirmAll = async () => {
         if (!batchId) return;
 
-        // Build the full deletion map to send to the server
-        const deletionMap: Record<number, boolean> = {};
-        if (batch) {
-            for (let i = 0; i < batch.transactions.length; i++) {
-                if (isTxPendingDeletion(i)) {
-                    deletionMap[i] = true;
-                }
-            }
-        }
-
-        const deletionCount = Object.keys(deletionMap).length;
-        if (deletionCount > 0) {
-            if (!confirm(`Se eliminarán ${deletionCount} transacciones marcadas para borrar y se guardarán las restantes. ¿Continuar?`)) {
-                return;
-            }
-        }
-
         setIsConfirmingAll(true);
 
         try {
             const res = await fetch(`/api/ingestion/batches/${batchId}/confirm-all`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ deletionIndices: deletionMap }),
             });
 
             if (!res.ok) {
@@ -275,7 +175,7 @@ export default function ReviewClient() {
                 throw new Error(err.error || "Failed to confirm all");
             }
 
-            router.push("/ingestion");
+            router.push("/global-position");
         } catch (error: any) {
             console.error("Confirm all error:", error);
             alert(`Error al guardar el lote: ${error.message}`);
@@ -288,7 +188,7 @@ export default function ReviewClient() {
         if (!batchId || !confirm("¿Descartar toda la importación?")) return;
 
         await fetch(`/api/ingestion/batches/${batchId}`, { method: "DELETE" });
-        router.push("/ingestion");
+        router.push("/global-position");
     };
 
     const formatCurrency = (num: number) =>
@@ -298,8 +198,8 @@ export default function ReviewClient() {
         return (
             <PremiumCard className="text-center py-12">
                 <p className="text-slate-500 font-medium">No se ha encontrado el lote de importación.</p>
-                <button onClick={() => router.push("/ingestion")} className="mt-4 text-sm font-bold text-emerald-600 hover:underline">
-                    Volver a Ingesta
+                <button onClick={() => router.push("/global-position")} className="mt-4 text-sm font-bold text-emerald-600 hover:underline">
+                    Volver a Posición Global
                 </button>
             </PremiumCard>
         );
@@ -318,8 +218,8 @@ export default function ReviewClient() {
         return (
             <PremiumCard className="text-center py-12">
                 <p className="text-slate-500 font-medium">Lote no encontrado o expirado.</p>
-                <button onClick={() => router.push("/ingestion")} className="mt-4 text-sm font-bold text-emerald-600 hover:underline">
-                    Volver a Ingesta
+                <button onClick={() => router.push("/global-position")} className="mt-4 text-sm font-bold text-emerald-600 hover:underline">
+                    Volver a Posición Global
                 </button>
             </PremiumCard>
         );
@@ -334,19 +234,16 @@ export default function ReviewClient() {
             <div className="flex justify-between items-end">
                 <div>
                     <button
-                        onClick={() => router.push("/ingestion")}
+                        onClick={() => router.push("/global-position")}
                         className="text-sm text-slate-500 hover:text-slate-700 font-medium flex items-center gap-1 mb-2"
                     >
-                        <ArrowLeft size={14} /> Volver a Ingesta
+                        <ArrowLeft size={14} /> Volver a Posición Global
                     </button>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
                         {t("ingestion.review_title") !== "ingestion.review_title" ? t("ingestion.review_title") : "Revisar Importación"}
                     </h1>
                     <p className="text-sm font-medium text-slate-500 mt-1">
                         {batch.totalCount} transacciones detectadas
-                        {totalPendingDeletions > 0 && (
-                            <span className="text-amber-600"> — {totalPendingDeletions} marcadas para eliminar</span>
-                        )}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -368,7 +265,7 @@ export default function ReviewClient() {
             </div>
 
             {/* AI Suggested Categories */}
-            {pendingSuggestions.length > 0 && (
+            {!batch.useOnlyExistingCategories && pendingSuggestions.length > 0 && (
                 <PremiumCard className="border-indigo-100 bg-indigo-50/30 !py-4">
                     <div className="flex items-center gap-2 mb-3">
                         <Sparkles size={14} className="text-indigo-500" />
@@ -395,82 +292,6 @@ export default function ReviewClient() {
                             </div>
                         ))}
                     </div>
-                </PremiumCard>
-            )}
-
-            {/* Pending Deletion Section */}
-            {deletionItems.length > 0 && (
-                <PremiumCard className="border-amber-200 bg-amber-50/40 !py-0 overflow-hidden">
-                    <button
-                        onClick={() => setDeletionSectionExpanded(prev => !prev)}
-                        className="w-full flex items-center justify-between px-5 py-4"
-                    >
-                        <div className="flex items-center gap-2">
-                            <AlertTriangle size={14} className="text-amber-600" />
-                            <h3 className="text-xs font-bold text-amber-700 uppercase tracking-widest">
-                                Transacciones pendientes de eliminar
-                            </h3>
-                            <span className="text-[10px] font-bold bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
-                                {deletionItems.length} en esta página
-                                {totalPendingDeletions > deletionItems.length && ` · ${totalPendingDeletions} en total`}
-                            </span>
-                        </div>
-                        {deletionSectionExpanded ? <ChevronUp size={16} className="text-amber-600" /> : <ChevronDown size={16} className="text-amber-600" />}
-                    </button>
-
-                    {deletionSectionExpanded && (
-                        <div className="border-t border-amber-200">
-                            <div className="px-5 py-2 text-[10px] font-medium text-amber-600">
-                                Estas transacciones no se guardarán al confirmar. Pulsa restaurar si quieres conservar alguna.
-                            </div>
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead className="bg-amber-100/60 text-[10px] uppercase font-bold text-amber-700 tracking-wider">
-                                    <tr>
-                                        <th className="px-5 py-2 border-b border-amber-200 w-24">Fecha</th>
-                                        <th className="px-5 py-2 border-b border-amber-200 min-w-[200px]">Concepto</th>
-                                        <th className="px-5 py-2 border-b border-amber-200 w-32 text-right">Importe</th>
-                                        <th className="px-5 py-2 border-b border-amber-200 min-w-[200px]">Motivo</th>
-                                        <th className="px-5 py-2 border-b border-amber-200 w-24 text-center">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-amber-100 bg-white/50">
-                                    {deletionItems.map(({ tx, batchIndex }) => {
-                                        const displayTx = pageTransactions[batchIndex - pageIndex * PAGE_SIZE] || tx;
-                                        const reason = getTxDeletionReason(batchIndex);
-
-                                        return (
-                                            <tr key={batchIndex} className="hover:bg-amber-50/50 transition-colors">
-                                                <td className="px-5 py-2.5 text-slate-500 font-medium font-mono text-xs">{displayTx.date}</td>
-                                                <td className="px-5 py-2.5">
-                                                    <div className="font-bold text-slate-600 line-through text-xs">{displayTx.description}</div>
-                                                    {displayTx.friendlyDescription && (
-                                                        <div className="text-[11px] text-slate-400 line-through">{displayTx.friendlyDescription}</div>
-                                                    )}
-                                                </td>
-                                                <td className="px-5 py-2.5 text-right font-mono font-bold text-xs">
-                                                    <span className={displayTx.amount < 0 ? "text-slate-400" : "text-emerald-400"}>
-                                                        {formatCurrency(displayTx.amount)}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-2.5 text-xs text-amber-700 font-medium">
-                                                    {reason}
-                                                </td>
-                                                <td className="px-5 py-2.5 text-center">
-                                                    <button
-                                                        onClick={() => handleRestoreFromDeletion(batchIndex)}
-                                                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                        title="Restaurar transacción"
-                                                    >
-                                                        <RotateCcw size={14} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
                 </PremiumCard>
             )}
 
@@ -513,27 +334,22 @@ export default function ReviewClient() {
                                 <th className="px-5 py-3 border-b border-slate-200 w-32 text-right">Importe</th>
                                 <th className="px-5 py-3 border-b border-slate-200 min-w-[150px]">Categoría</th>
                                 <th className="px-5 py-3 border-b border-slate-200 min-w-[150px]">Vincular Activo/Proyecto</th>
-                                <th className="px-5 py-3 border-b border-slate-200 w-12"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                            {activeItems.length === 0 ? (
+                            {pageTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-slate-400 font-medium">
-                                        Todas las transacciones de esta página están marcadas para eliminar.
+                                    <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-400 font-medium">
+                                        No hay transacciones en esta página.
                                     </td>
                                 </tr>
                             ) : (
-                                activeItems.map(({ batchIndex }) => {
-                                    const localIdx = batchIndex - pageIndex * PAGE_SIZE;
-                                    const tx = pageTransactions[localIdx];
-                                    if (!tx) return null;
-
+                                pageTransactions.map((tx, localIdx) => {
                                     const corrKey = normalizeDescription(tx.description);
                                     const wasCorrected = !!corrections[corrKey];
 
                                     return (
-                                        <tr key={batchIndex} className="hover:bg-slate-50/50 transition-colors">
+                                        <tr key={localIdx} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-5 py-3 text-slate-500 font-medium font-mono text-xs">{tx.date}</td>
                                             <td className="px-5 py-3">
                                                 <input
@@ -571,7 +387,6 @@ export default function ReviewClient() {
                                                         {categoryNames.map(name => (
                                                             <option key={name} value={name}>{name}</option>
                                                         ))}
-                                                        {/* If current value is not in the list, show it anyway */}
                                                         {tx.category && !categoryNames.includes(tx.category) && (
                                                             <option value={tx.category}>{tx.category} (nueva)</option>
                                                         )}
@@ -617,15 +432,6 @@ export default function ReviewClient() {
                                                     </optgroup>
                                                 </select>
                                             </td>
-                                            <td className="px-3 py-3">
-                                                <button
-                                                    onClick={() => handleMarkForDeletion(batchIndex)}
-                                                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Marcar para eliminar"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </td>
                                         </tr>
                                     );
                                 })
@@ -638,13 +444,7 @@ export default function ReviewClient() {
                 <div className="p-6 bg-slate-50 border-t border-slate-200">
                     <div className="flex items-center justify-between">
                         <div className="text-xs font-medium text-slate-500">
-                            Mostrando {activeItems.length} de {batch.totalCount} transacciones
-                            {deletionItems.length > 0 && (
-                                <span className="ml-2 text-amber-600">
-                                    <Trash2 size={10} className="inline mr-0.5" />
-                                    {deletionItems.length} pendientes de eliminar en esta página
-                                </span>
-                            )}
+                            Mostrando {pageTransactions.length} de {batch.totalCount} transacciones
                             {Object.keys(corrections).length > 0 && (
                                 <span className="ml-2 text-emerald-600">
                                     <Sparkles size={10} className="inline mr-0.5" />
@@ -656,7 +456,7 @@ export default function ReviewClient() {
                         <div className="flex items-center gap-3">
                             {pageParam > 1 && (
                                 <button
-                                    onClick={() => router.push(`/ingestion/review?batchId=${batchId}&page=${pageParam - 1}`)}
+                                    onClick={() => router.push(`/global-position/review?batchId=${batchId}&page=${pageParam - 1}`)}
                                     className="px-4 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors flex items-center gap-1"
                                 >
                                     <ChevronLeft size={16} /> Anterior

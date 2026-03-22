@@ -41,6 +41,19 @@ export async function POST(req: Request) {
     }
 }
 
+// Reset all categories to DEFAULT_CATEGORIES
+export async function PUT() {
+    await dbConnect();
+    try {
+        await Category.deleteMany({});
+        await Category.insertMany(DEFAULT_CATEGORIES.map(name => ({ name })));
+        const categories = await Category.find().sort({ name: 1 });
+        return NextResponse.json(categories);
+    } catch (error: any) {
+        return NextResponse.json({ error: "Failed to reset categories" }, { status: 500 });
+    }
+}
+
 export async function DELETE(req: Request) {
     await dbConnect();
     try {

@@ -20,19 +20,23 @@ export async function GET(req: Request) {
         if (sortBy === "date") sortObj.createdAt = sortOrder;
 
         if (paginated) {
-            const skip = (page - 1) * limit;
+            const showAll = limit === 0;
+            const skip = showAll ? 0 : (page - 1) * limit;
+            const findQuery = Transaction.find(query).sort(sortObj);
+            if (!showAll) findQuery.skip(skip).limit(limit);
+
             const [transactions, total] = await Promise.all([
-                Transaction.find(query).sort(sortObj).skip(skip).limit(limit),
+                findQuery,
                 Transaction.countDocuments(query),
             ]);
 
             return NextResponse.json({
                 data: transactions,
                 pagination: {
-                    page,
-                    limit,
+                    page: showAll ? 1 : page,
+                    limit: showAll ? total : limit,
                     total,
-                    totalPages: Math.ceil(total / limit) || 1,
+                    totalPages: showAll ? 1 : (Math.ceil(total / limit) || 1),
                 },
             });
         }

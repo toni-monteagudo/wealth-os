@@ -30,11 +30,19 @@ export function buildTransactionQuery(searchParams: URLSearchParams): Record<str
         if (dateTo) query.date.$lte = dateTo;
     }
 
-    // Amount range
+    // Amount type (income/expense)
+    const amountType = searchParams.get("amountType");
+    if (amountType === "income") {
+        query.amount = { $gt: 0 };
+    } else if (amountType === "expense") {
+        query.amount = { $lt: 0 };
+    }
+
+    // Amount range (merge with existing amount constraints from amountType)
     const amountMin = searchParams.get("amountMin");
     const amountMax = searchParams.get("amountMax");
     if (amountMin || amountMax) {
-        query.amount = {};
+        if (!query.amount) query.amount = {};
         if (amountMin) query.amount.$gte = parseFloat(amountMin);
         if (amountMax) query.amount.$lte = parseFloat(amountMax);
     }
