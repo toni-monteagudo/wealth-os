@@ -125,16 +125,21 @@ export interface Note {
     isImportant?: boolean;
 }
 
+export type ProjectType = "renovation" | "vacation";
+
 export interface IProject {
     _id?: string;
     name: string;
     description: string;
+    type: ProjectType;
     linkedAssetId?: string;
     budget: number;
     actualSpent: number;
     progress: number;
     capitalize: boolean;
     estimatedEnd: string;
+    startDate?: string;
+    destination?: string;
     expenses: Expense[];
     notes: Note[];
 }

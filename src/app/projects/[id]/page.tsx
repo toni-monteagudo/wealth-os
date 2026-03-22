@@ -6,7 +6,7 @@ import { useApi } from "@/hooks/useApi";
 import { IProject, ITransaction } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { PremiumCard } from "@/components/ui/PremiumCard";
-import { Hammer, CalendarClock, ArrowRightLeft } from "lucide-react";
+import { Hammer, Plane, CalendarClock, ArrowRightLeft, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
 export default function ProjectPage() {
@@ -23,6 +23,11 @@ export default function ProjectPage() {
         return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(num);
     };
 
+    const projectType = project.type ?? "renovation";
+    const isVacation = projectType === "vacation";
+    const HeaderIcon = isVacation ? Plane : Hammer;
+    const notesTitle = isVacation ? t("projects.travel_notes") : t("projects.construction_notes");
+
     return (
         <main className="p-6 lg:p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-6">
 
@@ -32,10 +37,17 @@ export default function ProjectPage() {
                 <div className="relative w-full flex justify-between items-end z-10">
                     <div>
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 backdrop-blur border border-white/20 rounded-full text-white text-[10px] font-bold uppercase tracking-wider mb-3">
-                            <Hammer size={12} /> {project.progress >= 100 ? t("projects.completed") : t("projects.in_course")}
+                            <HeaderIcon size={12} /> {project.progress >= 100 ? t("projects.completed") : t("projects.in_course")}
                         </div>
                         <h1 className="text-4xl font-bold text-white tracking-tight mb-1">{project.name}</h1>
-                        <p className="text-slate-400 font-medium">{project.description}</p>
+                        <div className="flex items-center gap-3">
+                            <p className="text-slate-400 font-medium">{project.description}</p>
+                            {isVacation && project.destination && (
+                                <span className="inline-flex items-center gap-1 text-sky-300 text-sm font-bold">
+                                    <MapPin size={14} /> {project.destination}
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <button className="px-5 py-2.5 bg-accent text-white rounded-lg font-bold text-sm shadow-md transition-colors hover:bg-teal-600">
                         {t("projects.new_expense")}
@@ -165,11 +177,21 @@ export default function ProjectPage() {
                                 </p>
                             </div>
                         </div>
+
+                        {/* Travel dates for vacation projects */}
+                        {isVacation && (project.startDate || project.estimatedEnd) && (
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-2">{t("projects.travel_dates")}</p>
+                                <p className="text-sm font-bold text-slate-700">
+                                    {project.startDate || "—"} → {project.estimatedEnd || "—"}
+                                </p>
+                            </div>
+                        )}
                     </PremiumCard>
 
                     <PremiumCard className="flex flex-col flex-1 bg-slate-50 border-slate-100">
                         <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4 flex items-center justify-between">
-                            {t("projects.construction_notes")} <CalendarClock size={16} className="text-slate-400" />
+                            {notesTitle} <CalendarClock size={16} className="text-slate-400" />
                         </h3>
 
                         <div className="flex-1 space-y-3 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">

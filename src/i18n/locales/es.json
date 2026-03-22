@@ -131,7 +131,22 @@
         "actual": "Ejecutado",
         "progress": "Progreso",
         "all_projects": "Todos los Proyectos",
-        "all_projects_subtitle": "Gestiona y supervisa todos tus proyectos activos."
+        "all_projects_subtitle": "Gestiona y supervisa todos tus proyectos activos.",
+        "new_project": "Nuevo Proyecto",
+        "travel_notes": "Notas de Viaje",
+        "destination": "Destino",
+        "start_date": "Fecha de Inicio",
+        "return_date": "Fecha de Regreso",
+        "type_renovation": "Reforma",
+        "type_vacation": "Viaje",
+        "filter_all": "Todos",
+        "filter_renovations": "Reformas",
+        "filter_vacations": "Viajes",
+        "travel_dates": "Fechas de Viaje",
+        "select_type": "Tipo de Proyecto",
+        "linked_asset": "Activo Vinculado",
+        "select_asset": "Seleccionar activo...",
+        "no_assets": "Sin activos disponibles"
     },
     "vault": {
         "title": "Documentos y Reservas",
