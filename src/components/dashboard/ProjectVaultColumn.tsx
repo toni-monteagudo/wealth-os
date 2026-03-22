@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Hammer, Folder, Clock, CheckCircle2, FileSpreadsheet } from "lucide-react";
+import { Hammer, Plane, PartyPopper, Folder, Clock, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
 import { IProject, IDocument } from "@/types";
@@ -36,12 +36,23 @@ export default function ProjectVaultColumn() {
                     <div className="animate-pulse flex-1 h-32 bg-slate-100 rounded-xl"></div>
                 ) : projects && projects.length > 0 ? (
                     <div className="space-y-4">
-                        {projects.map((proj: IProject) => (
+                        {projects.map((proj: IProject) => {
+                            const projType = proj.type ?? "renovation";
+                            const Icon = projType === "vacation" ? Plane : projType === "event" ? PartyPopper : Hammer;
+                            return (
                             <PremiumCard key={proj._id} className="p-5 flex flex-col gap-4">
                                 <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="text-slate-900 font-bold text-lg mb-1">{proj.name}</h3>
-                                        <p className="text-slate-500 text-xs font-medium">{proj.description}</p>
+                                    <div className="flex items-start gap-2.5">
+                                        <div className={`p-1.5 rounded-lg mt-0.5 ${projType === "vacation" ? "bg-sky-50 text-sky-600" : projType === "event" ? "bg-violet-50 text-violet-600" : "bg-slate-100 text-slate-600"}`}>
+                                            <Icon size={14} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-slate-900 font-bold text-lg mb-1">{proj.name}</h3>
+                                            {projType === "vacation" && proj.destination && (
+                                                <p className="text-sky-600 text-[10px] font-bold mb-0.5">{proj.destination}</p>
+                                            )}
+                                            <p className="text-slate-500 text-xs font-medium">{proj.description}</p>
+                                        </div>
                                     </div>
                                     <Badge variant={proj.progress >= 100 ? "success" : "info"} className="!text-[8px]">
                                         {proj.progress >= 100 ? t("projects.completed") : t("projects.in_course")}
@@ -65,7 +76,8 @@ export default function ProjectVaultColumn() {
                                     <span className="text-slate-600 font-medium text-xs">{proj.estimatedEnd}</span>
                                 </div>
                             </PremiumCard>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <EmptyState

@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Project from "@/models/Project";
 
-export async function GET() {
+export async function GET(req: Request) {
     await dbConnect();
     try {
-        const projects = await Project.find({}).populate("linkedAssetId").sort({ createdAt: -1 });
+        const { searchParams } = new URL(req.url);
+        const type = searchParams.get("type");
+        const filter: Record<string, string> = {};
+        if (type) filter.type = type;
+        const projects = await Project.find(filter).populate("linkedAssetId").sort({ createdAt: -1 });
         return NextResponse.json(projects);
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });

@@ -2,24 +2,39 @@
 
 import React from "react";
 import Link from "next/link";
-import { Hammer, Clock } from "lucide-react";
+import { Hammer, Clock, Plane, PartyPopper, Plus } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useApi } from "@/hooks/useApi";
-import { IProject } from "@/types";
+import { IProject, ProjectType } from "@/types";
 import { useI18n } from "@/i18n/I18nContext";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Plus } from "lucide-react";
 import { AddProjectForm } from "@/components/forms/AddProjectForm";
+
+const FILTER_TABS: { key: string; type?: ProjectType }[] = [
+    { key: "filter_all" },
+    { key: "filter_renovations", type: "renovation" },
+    { key: "filter_vacations", type: "vacation" },
+    { key: "filter_events", type: "event" },
+];
 
 export default function ProjectsListPage() {
     const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
-    const { data: projects, loading, mutate } = useApi<IProject[]>("/api/projects");
+    const [activeFilter, setActiveFilter] = React.useState<ProjectType | undefined>(undefined);
+    const apiUrl = activeFilter ? `/api/projects?type=${activeFilter}` : "/api/projects";
+    const { data: projects, loading, mutate } = useApi<IProject[]>(apiUrl);
     const { t } = useI18n();
 
     const formatCurrency = (num: number) => {
         return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(num);
+    };
+
+    const getProjectIcon = (project: IProject) => {
+        const type = project.type ?? "renovation";
+        if (type === "vacation") return Plane;
+        if (type === "event") return PartyPopper;
+        return Hammer;
     };
 
     return (
@@ -37,8 +52,25 @@ export default function ProjectsListPage() {
                     className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-sm"
                 >
                     <Plus size={16} />
-                    Nuevo Proyecto
+                    {t("projects.new_project")}
                 </button>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-2">
+                {FILTER_TABS.map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setActiveFilter(tab.type)}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                            activeFilter === tab.type
+                                ? "bg-slate-900 text-white shadow-sm"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                    >
+                        {t(`projects.${tab.key}`)}
+                    </button>
+                ))}
             </div>
 
             {/* KPI Summary */}
@@ -70,57 +102,80 @@ export default function ProjectsListPage() {
                 </div>
             ) : projects && projects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {projects.map((proj: IProject) => (
-                        <Link key={proj._id} href={`/projects/${proj._id}`}>
-                            <PremiumCard className="p-6 flex flex-col gap-4 hover:border-accent hover:shadow-lg transition-all group h-full">
-                                <div className="flex justify-between items-start">
+                    {projects.map((proj: IProject) => {
+                        const Icon = getProjectIcon(proj);
+                        const projType = proj.type ?? "renovation";
+                        return (
+                            <Link key={proj._id} href={`/projects/${proj._id}`}>
+                                <PremiumCard className="p-6 flex flex-col gap-4 hover:border-accent hover:shadow-lg transition-all group h-full">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-start gap-3">
+                                            <div className={`p-2 rounded-lg ${projType === "vacation" ? "bg-sky-50 text-sky-600" : projType === "event" ? "bg-violet-50 text-violet-600" : "bg-slate-100 text-slate-600"}`}>
+                                                <Icon size={18} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-slate-900 font-bold text-xl mb-1 group-hover:text-accent transition-colors">{proj.name}</h3>
+                                                {projType === "vacation" && proj.destination && (
+                                                    <p className="text-sky-600 text-xs font-bold mb-0.5">{proj.destination}</p>
+                                                )}
+                                                <p className="text-slate-500 text-sm font-medium">{proj.description}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1.5">
+                                            <Badge variant={proj.progress >= 100 ? "success" : "info"}>
+                                                {proj.progress >= 100 ? t("projects.completed") : t("projects.in_course")}
+                                            </Badge>
+                                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                                projType === "vacation"
+                                                    ? "bg-sky-50 text-sky-600"
+                                                    : projType === "event"
+                                                    ? "bg-violet-50 text-violet-600"
+                                                    : "bg-slate-100 text-slate-500"
+                                            }`}>
+                                                {t(`projects.type_${projType}`)}
+                                            </span>
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <h3 className="text-slate-900 font-bold text-xl mb-1 group-hover:text-accent transition-colors">{proj.name}</h3>
-                                        <p className="text-slate-500 text-sm font-medium">{proj.description}</p>
+                                        <div className="flex justify-between items-baseline mb-1.5">
+                                            <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider">{t("dashboard.actual")} / {t("projects.budgeted")}</span>
+                                            <span className="text-slate-900 font-bold text-sm">
+                                                {formatCurrency(proj.actualSpent)} <span className="text-slate-400 font-medium">/ {formatCurrency(proj.budget)}</span>
+                                            </span>
+                                        </div>
+                                        <ProgressBar progress={(proj.actualSpent / proj.budget) * 100} colorClass={proj.actualSpent > proj.budget ? "bg-rose-500" : "bg-accent"} />
                                     </div>
-                                    <Badge variant={proj.progress >= 100 ? "success" : "info"}>
-                                        {proj.progress >= 100 ? t("projects.completed") : t("projects.in_course")}
-                                    </Badge>
-                                </div>
 
-                                <div>
-                                    <div className="flex justify-between items-baseline mb-1.5">
-                                        <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider">{t("dashboard.actual")} / {t("projects.budgeted")}</span>
-                                        <span className="text-slate-900 font-bold text-sm">
-                                            {formatCurrency(proj.actualSpent)} <span className="text-slate-400 font-medium">/ {formatCurrency(proj.budget)}</span>
-                                        </span>
+                                    <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                                            <Clock size={12} /> {projType === "vacation" ? t("projects.return_date") : t("projects.estimated_end_date")}
+                                        </div>
+                                        <span className="text-slate-600 font-medium text-xs">{proj.estimatedEnd}</span>
                                     </div>
-                                    <ProgressBar progress={(proj.actualSpent / proj.budget) * 100} colorClass={proj.actualSpent > proj.budget ? "bg-rose-500" : "bg-accent"} />
-                                </div>
 
-                                <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
-                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                                        <Clock size={12} /> {t("projects.estimated_end_date")}
+                                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                                        <span className="font-bold">{proj.expenses.length}</span> gastos registrados
                                     </div>
-                                    <span className="text-slate-600 font-medium text-xs">{proj.estimatedEnd}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-xs text-slate-400">
-                                    <span className="font-bold">{proj.expenses.length}</span> gastos registrados
-                                </div>
-                            </PremiumCard>
-                        </Link>
-                    ))}
+                                </PremiumCard>
+                            </Link>
+                        );
+                    })}
                 </div>
             ) : (
                 <EmptyState
                     icon={Hammer}
-                    title="No hay proyectos en macha"
-                    description="¿Tienes alguna reforma o nuevo negocio en mente? Crea tu primer proyecto para gestionar su presupuesto."
-                    actionLabel="Nuevo Proyecto"
+                    title="No hay proyectos en marcha"
+                    description="Crea tu primer proyecto para gestionar su presupuesto."
+                    actionLabel={t("projects.new_project")}
                     actionHref="#"
                 />
             )}
 
-            <AddProjectForm 
-                isOpen={isAddModalOpen} 
-                onClose={() => setIsAddModalOpen(false)} 
-                onSuccess={() => mutate()} 
+            <AddProjectForm
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onSuccess={() => mutate()}
             />
         </main>
     );
